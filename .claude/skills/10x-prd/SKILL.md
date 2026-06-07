@@ -8,6 +8,14 @@ description: >
   schema-conformant PRD written to disk. Trigger phrases: "write the PRD",
   "generate PRD", "create the PRD from notes", "stwórz PRD", "turn notes into a
   PRD", "PRD from shape-notes". Use AFTER /10x-shape, not in place of it.
+argument-hint: "[path-to-notes-file]"
+allowed-tools:
+  - Read
+  - Write
+  - Bash
+  - AskUserQuestion
+  - TaskCreate
+  - TaskUpdate
 ---
 
 # PRD: Generate context/foundation/prd.md from shape-notes
@@ -61,10 +69,17 @@ If the file exists, read it FULLY (no `limit`/`offset`) and proceed to Step 1.5.
 
 If the file does not exist, ask:
 
-Ask the user: "No input file found at `<resolved-path>`. How would you like to proceed?" with options:
-- "Run /10x-shape first (Recommended)" (description: "Stop here. Run /10x-shape to produce shape-notes.md, then re-invoke /10x-prd.")
-- "Paste raw notes" (description: "I'll wait for you to paste any notes you have. The thin-input check will warn about missing signals.")
-- "Cancel" (description: "Exit without changes.")
+AskUserQuestion:
+- question: "No input file found at `<resolved-path>`. How would you like to proceed?"
+  header: "Input?"
+  options:
+  - label: "Run /10x-shape first (Recommended)"
+    description: "Stop here. Run /10x-shape to produce shape-notes.md, then re-invoke /10x-prd."
+  - label: "Paste raw notes"
+    description: "I'll wait for you to paste any notes you have. The thin-input check will warn about missing signals."
+  - label: "Cancel"
+    description: "Exit without changes."
+  multiSelect: false
 
 On "Run /10x-shape first": print "Stopping. Run `/10x-shape` to produce shape-notes.md, then re-invoke `/10x-prd`." and STOP.
 
@@ -83,9 +98,15 @@ Determine whether to generate a greenfield or brownfield PRD:
 
    Confirm with the user:
 
-   Ask the user: "No context_type found in the input. Based on cwd markers, this looks like [greenfield|brownfield]. Correct?" with options:
-   - "[Detected mode] — correct (Recommended)" (description: "Generate a [greenfield|brownfield] PRD.")
-   - "[Other mode] — override" (description: "Generate a [other] PRD instead.")
+   AskUserQuestion:
+   - question: "No context_type found in the input. Based on cwd markers, this looks like [greenfield|brownfield]. Correct?"
+     header: "Context"
+     options:
+     - label: "[Detected mode] — correct (Recommended)"
+       description: "Generate a [greenfield|brownfield] PRD."
+     - label: "[Other mode] — override"
+       description: "Generate a [other] PRD instead."
+     multiSelect: false
 
 Store the resolved `context_type` for use in Steps 2 and 3. Proceed to Step 2.
 
@@ -134,10 +155,17 @@ time to run /10x-shape first, the resulting PRD will be substantially stronger.
 
 Then ask:
 
-Ask the user: "How would you like to proceed?" with options:
-- "Run /10x-shape first (Recommended)" (description: "Stop here. Use /10x-shape to fill in the missing signals, then re-invoke /10x-prd.")
-- "Proceed anyway" (description: "Generate the PRD from what's there. Missing pieces land in ## Open Questions verbatim.")
-- "Cancel" (description: "Exit without changes.")
+AskUserQuestion:
+- question: "How would you like to proceed?"
+  header: "Thin input"
+  options:
+  - label: "Run /10x-shape first (Recommended)"
+    description: "Stop here. Use /10x-shape to fill in the missing signals, then re-invoke /10x-prd."
+  - label: "Proceed anyway"
+    description: "Generate the PRD from what's there. Missing pieces land in ## Open Questions verbatim."
+  - label: "Cancel"
+    description: "Exit without changes."
+  multiSelect: false
 
 On "Run /10x-shape first": print the redirect message and STOP. On "Proceed anyway": continue to Step 3 with `score < 2` recorded so later steps know to expect TODOs. On "Cancel": STOP.
 
@@ -154,7 +182,7 @@ Populate every required frontmatter field per the schema:
 - `project` — extract from input frontmatter `project:` if present; otherwise from a Title heading (`# <Project>`); otherwise `# TODO: project — see Open Questions`.
 - `version` — `1` for the first PRD this skill writes. The collision step (Step 4) bumps this if the user picks a versioned save.
 - `status` — `draft`. Never promote to `reviewed`/`locked`; that's a downstream decision.
-- `created` — today's date in `YYYY-MM-DD` (use `date +%Y-%m-%d` in a shell).
+- `created` — today's date in `YYYY-MM-DD` (use `Bash: date +%Y-%m-%d`).
 - `context_type` — `greenfield` or `brownfield` (from Step 1.5).
 - `product_type` — pull from input if available; otherwise `# TODO: product_type — see Open Questions` (and add an Open Question entry).
 - `target_scale`, `timeline_budget` — same rule. If the input has the field, copy it verbatim; if not, emit `# TODO: <field> — see Open Questions` and add a matching Open Question. For brownfield, `timeline_budget` uses `delivery_weeks` instead of `mvp_weeks`.
@@ -208,7 +236,7 @@ For each section:
 - **If the input has partial content** — transcribe what's there, then close with `# TODO: <what's missing> — see Open Questions` inside the section, and add a matching numbered entry under `## Open Questions`.
 - **If the input has no matching content** — emit just the heading plus `# TODO: <section name> — see Open Questions`, and add a matching numbered entry under `## Open Questions`.
 
-If shape-notes.md carried Socrates blockquotes under FRs, preserve them verbatim — they're load-bearing for downstream review.
+If `/10x-shape` recorded Socrates blockquotes under FRs, preserve them verbatim — they're load-bearing for downstream review.
 
 If shape-notes.md carried a `## Quality cross-check` block (from Step 7 of `/10x-shape`), mirror each gap into `## Open Questions` as a numbered entry naming the missing element and its consequence.
 
@@ -285,10 +313,17 @@ If the file does not exist, write to `context/foundation/prd.md` and proceed to 
 
 If the file exists, ask:
 
-Ask the user: "context/foundation/prd.md already exists. How would you like to proceed?" with options:
-- "Save as prd-vN.md (Recommended)" (description: "Preserve history. The new PRD lands at the next available prd-vN.md slot. The unversioned prd.md is unchanged.")
-- "Overwrite prd.md" (description: "Replace the existing prd.md. The prior version is lost (unless you've committed it).")
-- "Abort" (description: "Exit without writes. No collision resolution.")
+AskUserQuestion:
+- question: "context/foundation/prd.md already exists. How would you like to proceed?"
+  header: "Collision"
+  options:
+  - label: "Save as prd-vN.md (Recommended)"
+    description: "Preserve history. The new PRD lands at the next available prd-vN.md slot. The unversioned prd.md is unchanged."
+  - label: "Overwrite prd.md"
+    description: "Replace the existing prd.md. The prior version is lost (unless you've committed it)."
+  - label: "Abort"
+    description: "Exit without writes. No collision resolution."
+  multiSelect: false
 
 On "Save as prd-vN.md": pick `N` by scanning `context/foundation/` for files matching `prd-v*.md`. Treat the unversioned `prd.md` as v1. The next slot is `N = (max existing N or 1) + 1`. Write the validated content to `context/foundation/prd-v<N>.md` and bump the in-content `version:` frontmatter field to `<N>`. Proceed to Step 5.
 

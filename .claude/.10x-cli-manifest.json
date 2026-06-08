@@ -2,8 +2,8 @@
   "package": "@przeprogramowani/10x-cli",
   "version": "1.8.0",
   "manifestVersion": 3,
-  "lastApplied": "2026-06-07T15:40:33.848Z",
-  "lessonId": "m1l1",
+  "lastApplied": "2026-06-08T17:15:05.864Z",
+  "lessonId": "m1l2",
   "course": "10xdevs3",
   "tool": "claude-code",
   "files": {
@@ -33,11 +33,45 @@
         "contentHashes": {
           "SKILL.md": "bf769705e818d876e2e318b33d3c2acd7b5cccd93064c21a0a3c82ad4a6332d7"
         }
+      },
+      "10x-tech-stack-selector": {
+        "files": [
+          "references/agent-friendly-criteria.md",
+          "references/decision-flow.md",
+          "references/eval-cases.md",
+          "references/handoff-schema.md",
+          "references/residual-interview.md",
+          "references/starter-registry.yaml",
+          "SKILL.md"
+        ],
+        "contentHashes": {
+          "references/agent-friendly-criteria.md": "04e0cd99f1e64dd6dffe37a68844ddd8efb593057584afbe0fed308724eb0cad",
+          "references/decision-flow.md": "8f88998ae05601eb52d8d7038af4310a7b558d8c14ac091668e148b06de4fffd",
+          "references/eval-cases.md": "1bd474bd52bfb7a7efd5fa9a4f50f31f1a123f6acd6d0b5f2e9fd310b32fb920",
+          "references/handoff-schema.md": "157c5b8546b32c115b4e4ad05e29546bc6adda2a3739e30148bf391c9de167b2",
+          "references/residual-interview.md": "6b2b3f2b5975745e7c68e26748e7c2aaf4300de00e415f7c712fb8fac0272d95",
+          "references/starter-registry.yaml": "b31c10153c403b4c34b18a06c4665cfcde062ec148114630ccb17d2bd8afe6dc",
+          "SKILL.md": "70d6217bf119c88a69a9a8c86c19b650a1779b7ad3bc459ee15336de78580bec"
+        }
+      },
+      "10x-stack-assess": {
+        "files": [
+          "references/agent-friendly-criteria.md",
+          "SKILL.md"
+        ],
+        "contentHashes": {
+          "references/agent-friendly-criteria.md": "04e0cd99f1e64dd6dffe37a68844ddd8efb593057584afbe0fed308724eb0cad",
+          "SKILL.md": "694bfd569dd93a7d9d42f0d039ae1514c77351da84a03ae69d26f6cfe143141c"
+        }
       }
     },
-    "prompts": [],
+    "prompts": [
+      "skill-explainer.md"
+    ],
     "configs": [],
-    "promptHashes": {}
+    "promptHashes": {
+      "skill-explainer.md": "6ee36d65134a8f6ecc8062b15362bde673c702e1b71c09ac7455bc84e29b2848"
+    }
   },
   "lessons": {
     "m1l1": {
@@ -61,6 +95,48 @@
         }
       },
       "prompts": [],
+      "configs": []
+    },
+    "m1l2": {
+      "appliedAt": "2026-06-08T17:15:05.863Z",
+      "skills": {
+        "10x-init": {
+          "files": [
+            "SKILL.md"
+          ]
+        },
+        "10x-shape": {
+          "files": [
+            "references/prd-schema.md",
+            "SKILL.md"
+          ]
+        },
+        "10x-prd": {
+          "files": [
+            "SKILL.md"
+          ]
+        },
+        "10x-tech-stack-selector": {
+          "files": [
+            "references/agent-friendly-criteria.md",
+            "references/decision-flow.md",
+            "references/eval-cases.md",
+            "references/handoff-schema.md",
+            "references/residual-interview.md",
+            "references/starter-registry.yaml",
+            "SKILL.md"
+          ]
+        },
+        "10x-stack-assess": {
+          "files": [
+            "references/agent-friendly-criteria.md",
+            "SKILL.md"
+          ]
+        }
+      },
+      "prompts": [
+        "skill-explainer.md"
+      ],
       "configs": []
     }
   }

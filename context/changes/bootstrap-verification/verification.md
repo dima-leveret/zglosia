@@ -24,7 +24,7 @@ project_name: zglosia
 hints:
   language_family: js
   team_size: solo
-  deployment_target: cloudflare-pages
+  deployment_target: Vercel
   ci_provider: github-actions
   ci_default_flow: auto-deploy-on-merge
   bootstrapper_confidence: verified
@@ -53,7 +53,7 @@ for its mainstream, verified, fully agent-friendly React surface (typed,
 convention-based, deep training-data corpus, current docs), which matters for a
 solo builder leaning on AI assistance. Auth and AI flags are set; payments,
 realtime, and background jobs are out of scope per the PRD non-goals — plan
-generation runs on-demand, not queued. Deploys to Cloudflare Pages with GitHub
+generation runs on-demand, not queued. Deploys to Vercel with GitHub
 Actions auto-deploy-on-merge. Note: this repo runs a modified Next.js with
 breaking changes vs. stock (see AGENTS.md), so the bootstrapper and any agent
 must read node_modules/next/dist/docs before writing code; auth and Postgres
@@ -121,9 +121,9 @@ None.
 | path_taken              | custom                                                                                    |
 | self_check_answers      | typed: true, from_official_starter: true, conventions: true, docs_current: true, can_judge_agent: true |
 | team_size               | solo                                                                                      |
-| deployment_target       | cloudflare-pages                                                                          |
+| deployment_target       | Vercel                                                                                    |
 | ci_provider             | github-actions                                                                            |
-| ci_default_flow         | auto-deploy-on-merge                                                                       |
+| ci_default_flow         | auto-deploy-on-merge                                                                      |
 | has_auth                | true                                                                                      |
 | has_payments            | false                                                                                     |
 | has_realtime            | false                                                                                     |
@@ -131,7 +131,7 @@ None.
 | has_background_jobs     | false                                                                                     |
 
 v1 surfaces these for the audit trail but takes no compensating action. The `has_auth`
-and `has_ai` flags (and the Cloudflare Pages / GitHub Actions deploy intent) are carried
+and `has_ai` flags (and the Vercel / GitHub Actions deploy intent) are carried
 forward for a future skill to act on — the bare Next.js starter ships neither auth nor
 the LLM integration; those are assembled on top per the hand-off rationale.
 

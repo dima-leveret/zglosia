@@ -5,7 +5,7 @@ project_name: zglosia
 hints:
   language_family: js
   team_size: solo
-  deployment_target: cloudflare-pages
+  deployment_target: Vercel
   ci_provider: github-actions
   ci_default_flow: auto-deploy-on-merge
   bootstrapper_confidence: verified
@@ -34,7 +34,7 @@ for its mainstream, verified, fully agent-friendly React surface (typed,
 convention-based, deep training-data corpus, current docs), which matters for a
 solo builder leaning on AI assistance. Auth and AI flags are set; payments,
 realtime, and background jobs are out of scope per the PRD non-goals — plan
-generation runs on-demand, not queued. Deploys to Cloudflare Pages with GitHub
+generation runs on-demand, not queued. Deploys to Vercel with GitHub
 Actions auto-deploy-on-merge. Note: this repo runs a modified Next.js with
 breaking changes vs. stock (see AGENTS.md), so the bootstrapper and any agent
 must read node_modules/next/dist/docs before writing code; auth and Postgres

@@ -1,0 +1,21 @@
+import { loadEnv } from 'vite'
+import { defineConfig } from 'vitest/config'
+
+/**
+ * The isolation suite talks to a real Supabase instance — RLS can only be
+ * proven against Postgres, not a mock — so the Supabase keys have to reach
+ * process.env. Vitest does not read `.env.local` on its own; `loadEnv` with an
+ * empty prefix pulls in every var (not just VITE_-prefixed ones) from
+ * `.env`/`.env.local`/`.env.<mode>` and hands them to the test env.
+ */
+export default defineConfig(({ mode }) => ({
+  test: {
+    environment: 'node',
+    include: ['tests/**/*.test.ts'],
+    env: loadEnv(mode, process.cwd(), ''),
+    // Each test provisions real auth users over the network; the default 5s
+    // budget is not enough for signup + sign-in round trips.
+    testTimeout: 30_000,
+    hookTimeout: 30_000,
+  },
+}))

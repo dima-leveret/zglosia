@@ -22,6 +22,10 @@ export async function GET(request: NextRequest) {
     if (!error) {
       return NextResponse.redirect(new URL(next, request.url))
     }
+
+    console.error('verifyOtp failed:', error.status, error.code, error.message)
+  } else {
+    console.error('confirm route missing params:', { token_hash: !!token_hash, type })
   }
 
   return NextResponse.redirect(new URL('/login?error=invalid_link', request.url))

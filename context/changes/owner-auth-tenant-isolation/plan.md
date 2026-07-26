@@ -397,10 +397,10 @@ Negligible at MVP scale (low QPS, small data per shape-notes). Proxy runs on eve
 
 #### Manual
 
-- [ ] 3.4 Full magic-link login lands on `/dashboard` showing the owner's company
-- [ ] 3.5 `/dashboard` displays the correct company row (session + RLS happy path)
-- [ ] 3.6 Logout returns to `/login`; `/dashboard` then redirects to `/login`
-- [ ] 3.7 `/` redirects logged-out → `/login`, logged-in → `/dashboard`
+- [x] 3.4 Full magic-link login lands on `/dashboard` showing the owner's company
+- [x] 3.5 `/dashboard` displays the correct company row (session + RLS happy path)
+- [x] 3.6 Logout returns to `/login`; `/dashboard` then redirects to `/login`
+- [x] 3.7 `/` redirects logged-out → `/login`, logged-in → `/dashboard`
 
 ### Phase 4: Isolation Verification Harness
 

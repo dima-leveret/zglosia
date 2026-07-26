@@ -365,27 +365,27 @@ Negligible at MVP scale (low QPS, small data per shape-notes). Proxy runs on eve
 
 #### Automated
 
-- [x] 1.1 Migration applies cleanly from scratch: `supabase db reset`
-- [x] 1.2 SQL-level RLS assertion passes: owner B cannot select owner A's company row
-- [x] 1.3 Lint passes: `npm run lint`
+- [x] 1.1 Migration applies cleanly from scratch: `supabase db reset` — 3fc56b2
+- [x] 1.2 SQL-level RLS assertion passes: owner B cannot select owner A's company row — 3fc56b2
+- [x] 1.3 Lint passes: `npm run lint` — 3fc56b2
 
 #### Manual
 
-- [x] 1.4 New auth user auto-creates exactly one companies row with matching owner_id
-- [x] 1.5 `current_company_id()` returns the caller's company id (and null when none)
+- [x] 1.4 New auth user auto-creates exactly one companies row with matching owner_id — 3fc56b2
+- [x] 1.5 `current_company_id()` returns the caller's company id (and null when none) — 3fc56b2
 
 ### Phase 2: Auth Session Plumbing (server client, proxy, DAL)
 
 #### Automated
 
-- [ ] 2.1 Type check passes: `npx tsc --noEmit`
-- [ ] 2.2 Production build passes: `npm run build`
-- [ ] 2.3 Lint passes: `npm run lint`
+- [x] 2.1 Type check passes: `npx tsc --noEmit`
+- [x] 2.2 Production build passes: `npm run build`
+- [x] 2.3 Lint passes: `npm run lint`
 
 #### Manual
 
-- [ ] 2.4 Logged-out `/dashboard` request redirects to `/login`
-- [ ] 2.5 server.ts exposes both createClient() (session) and createAdminClient() with no import errors
+- [x] 2.4 Logged-out `/dashboard` request redirects to `/login`
+- [x] 2.5 server.ts exposes both createClient() (session) and createAdminClient() with no import errors
 
 ### Phase 3: Owner Auth Flow + Surface
 

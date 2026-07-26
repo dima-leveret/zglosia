@@ -38,6 +38,12 @@ export async function sendMagicLink(
   })
 
   if (error) {
+    console.error('signInWithOtp failed:', error.status, error.code, error.message)
+    if (error.status === 429) {
+      return {
+        message: 'Too many sign-in emails right now. Please wait a bit and try again.',
+      }
+    }
     return {
       message: 'Could not send the magic link. Please try again.',
     }

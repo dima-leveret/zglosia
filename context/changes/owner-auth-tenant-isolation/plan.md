@@ -344,8 +344,9 @@ Negligible at MVP scale (low QPS, small data per shape-notes). Proxy runs on eve
 
 ## Migration Notes
 
-- **Supabase email template (manual, one-time):** in the Supabase dashboard → Authentication → Email Templates → Magic Link, set the confirmation URL to `{{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&type=email` so the server-side `/auth/confirm` flow can call `verifyOtp`.
-- **Site URL / redirect allow-list:** add the local (`http://localhost:3000`) and production origins to Supabase Auth → URL Configuration so `emailRedirectTo` is accepted.
+- **Supabase email template (manual, one-time):** in the Supabase dashboard → Authentication → Email Templates → Magic Link, set the confirmation URL to `{{ .RedirectTo }}?token_hash={{ .TokenHash }}&type=email` so the server-side `/auth/confirm` flow can call `verifyOtp`. Use `{{ .RedirectTo }}` (the `emailRedirectTo` the Server Action passes, derived from the request origin), **not** `{{ .SiteURL }}` — `.SiteURL` is pinned to the production origin, so a link requested from `localhost:3000` would still land on production. Note `{{ .TokenHash }}` is not `{{ .Token }}`; the latter is the 6-digit OTP and fails `verifyOtp`.
+- **Site URL / redirect allow-list:** add the local (`http://localhost:3000/**`) and production (`https://zglosia.vercel.app/**`) origins to Supabase Auth → URL Configuration → Redirect URLs so `emailRedirectTo` is accepted. Without the entry, Supabase silently falls back to Site URL instead of erroring, so the symptom is landing on the wrong origin rather than a visible failure.
+- **Transactional email provider:** custom SMTP via a personal Gmail account works for local verification but is not a production sender (≈500 recipients/day, throttling, spam placement) — swap to a transactional provider before deploy. The SMTP username must be the full email address; Gmail additionally requires an App Password, not the account password.
 - Schema changes are forward-only migrations under `supabase/migrations/`; rollback = a new compensating migration (never edit an applied file).
 
 ## References
@@ -391,24 +392,24 @@ Negligible at MVP scale (low QPS, small data per shape-notes). Proxy runs on eve
 
 #### Automated
 
-- [x] 3.1 Build passes: `npm run build`
-- [x] 3.2 Lint passes: `npm run lint`
-- [x] 3.3 Invalid-email input to the Server Action returns a Zod field error
+- [x] 3.1 Build passes: `npm run build` — a09cdf1
+- [x] 3.2 Lint passes: `npm run lint` — a09cdf1
+- [x] 3.3 Invalid-email input to the Server Action returns a Zod field error — a09cdf1
 
 #### Manual
 
-- [ ] 3.4 Full magic-link login lands on `/dashboard` showing the owner's company
-- [ ] 3.5 `/dashboard` displays the correct company row (session + RLS happy path)
-- [ ] 3.6 Logout returns to `/login`; `/dashboard` then redirects to `/login`
-- [ ] 3.7 `/` redirects logged-out → `/login`, logged-in → `/dashboard`
+- [x] 3.4 Full magic-link login lands on `/dashboard` showing the owner's company — a09cdf1
+- [x] 3.5 `/dashboard` displays the correct company row (session + RLS happy path) — a09cdf1
+- [x] 3.6 Logout returns to `/login`; `/dashboard` then redirects to `/login` — a09cdf1
+- [x] 3.7 `/` redirects logged-out → `/login`, logged-in → `/dashboard` — a09cdf1
 
 ### Phase 4: Isolation Verification Harness
 
 #### Automated
 
-- [ ] 4.1 `npm test` passes: two-tenant isolation test is green
-- [ ] 4.2 Test asserts both own-row visibility AND cross-tenant denial
+- [x] 4.1 `npm test` passes: two-tenant isolation test is green — 276fcd6
+- [x] 4.2 Test asserts both own-row visibility AND cross-tenant denial — 276fcd6
 
 #### Manual
 
-- [ ] 4.3 Negative control: dropping the RLS SELECT policy makes the cross-tenant assertion fail, then restore
+- [x] 4.3 Negative control: dropping the RLS SELECT policy makes the cross-tenant assertion fail, then restore — 276fcd6

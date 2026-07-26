@@ -378,22 +378,22 @@ Negligible at MVP scale (low QPS, small data per shape-notes). Proxy runs on eve
 
 #### Automated
 
-- [x] 2.1 Type check passes: `npx tsc --noEmit`
-- [x] 2.2 Production build passes: `npm run build`
-- [x] 2.3 Lint passes: `npm run lint`
+- [x] 2.1 Type check passes: `npx tsc --noEmit` — b51319a
+- [x] 2.2 Production build passes: `npm run build` — b51319a
+- [x] 2.3 Lint passes: `npm run lint` — b51319a
 
 #### Manual
 
-- [x] 2.4 Logged-out `/dashboard` request redirects to `/login`
-- [x] 2.5 server.ts exposes both createClient() (session) and createAdminClient() with no import errors
+- [x] 2.4 Logged-out `/dashboard` request redirects to `/login` — b51319a
+- [x] 2.5 server.ts exposes both createClient() (session) and createAdminClient() with no import errors — b51319a
 
 ### Phase 3: Owner Auth Flow + Surface
 
 #### Automated
 
-- [ ] 3.1 Build passes: `npm run build`
-- [ ] 3.2 Lint passes: `npm run lint`
-- [ ] 3.3 Invalid-email input to the Server Action returns a Zod field error
+- [x] 3.1 Build passes: `npm run build`
+- [x] 3.2 Lint passes: `npm run lint`
+- [x] 3.3 Invalid-email input to the Server Action returns a Zod field error
 
 #### Manual
 

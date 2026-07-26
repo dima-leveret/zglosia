@@ -407,9 +407,9 @@ Negligible at MVP scale (low QPS, small data per shape-notes). Proxy runs on eve
 
 #### Automated
 
-- [x] 4.1 `npm test` passes: two-tenant isolation test is green
-- [x] 4.2 Test asserts both own-row visibility AND cross-tenant denial
+- [x] 4.1 `npm test` passes: two-tenant isolation test is green — 276fcd6
+- [x] 4.2 Test asserts both own-row visibility AND cross-tenant denial — 276fcd6
 
 #### Manual
 
-- [x] 4.3 Negative control: dropping the RLS SELECT policy makes the cross-tenant assertion fail, then restore
+- [x] 4.3 Negative control: dropping the RLS SELECT policy makes the cross-tenant assertion fail, then restore — 276fcd6

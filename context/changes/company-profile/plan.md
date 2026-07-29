@@ -385,26 +385,26 @@ Negligible at MVP scale. The profile page adds one RLS-scoped single-row read pe
 
 #### Automated
 
-- [x] 1.1 Migration applies to the linked project: `npx supabase db push`
-- [x] 1.2 Schema assertions pass: `npx vitest run tests/schema.test.ts`
-- [x] 1.3 Lint passes: `npm run lint`
+- [x] 1.1 Migration applies to the linked project: `npx supabase db push` — 6f24dc3
+- [x] 1.2 Schema assertions pass: `npx vitest run tests/schema.test.ts` — 6f24dc3
+- [x] 1.3 Lint passes: `npm run lint` — 6f24dc3
 
 #### Manual
 
-- [x] 1.4 Existing companies rows retain owner_id and name after the migration
+- [x] 1.4 Existing companies rows retain owner_id and name after the migration — 6f24dc3
 
 ### Phase 2: Validation + Data Access Contract
 
 #### Automated
 
-- [ ] 2.1 Type check passes: `npx tsc --noEmit`
-- [ ] 2.2 Production build passes: `npm run build`
-- [ ] 2.3 Lint passes: `npm run lint`
-- [ ] 2.4 Schema unit tests pass without network access: `npx vitest run tests/validation.test.ts`
+- [x] 2.1 Type check passes: `npx tsc --noEmit`
+- [x] 2.2 Production build passes: `npm run build`
+- [x] 2.3 Lint passes: `npm run lint`
+- [x] 2.4 Schema unit tests pass without network access: `npx vitest run tests/validation.test.ts`
 
 #### Manual
 
-- [ ] 2.5 `/dashboard` still renders the company card after the DAL widening
+- [x] 2.5 `/dashboard` still renders the company card after the DAL widening
 
 ### Phase 3: Profile Surface (view + edit)
 

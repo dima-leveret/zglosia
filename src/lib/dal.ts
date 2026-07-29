@@ -28,6 +28,10 @@ export const verifySession = cache(async () => {
  * Reads the caller's own company row. RLS scopes the query to owner_id =
  * auth.uid(), so no explicit owner filter is needed here — the isolation is
  * enforced in Postgres. Returns null only if the row is somehow absent.
+ *
+ * This filter-free convention applies to READS only. Write paths add an
+ * explicit owner filter as well: an over-matching select leaks, but an
+ * over-matching update rewrites every visible row.
  */
 export const getCompany = cache(async () => {
   await verifySession()
@@ -35,7 +39,7 @@ export const getCompany = cache(async () => {
   const supabase = await createClient()
   const { data, error } = await supabase
     .from('companies')
-    .select('id, name, created_at')
+    .select('id, name, industry, description, location, created_at, updated_at')
     .maybeSingle()
 
   if (error) {

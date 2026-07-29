@@ -12,9 +12,9 @@ import { LoginSchema, type FormState } from '@/lib/validation'
  * otherwise). Never reveals whether the email maps to an existing account.
  */
 export async function sendMagicLink(
-  _prevState: FormState,
+  _prevState: FormState<'email'>,
   formData: FormData
-): Promise<FormState> {
+): Promise<FormState<'email'>> {
   const validatedFields = LoginSchema.safeParse({
     email: formData.get('email'),
   })

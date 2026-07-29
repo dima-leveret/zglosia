@@ -397,29 +397,29 @@ Negligible at MVP scale. The profile page adds one RLS-scoped single-row read pe
 
 #### Automated
 
-- [x] 2.1 Type check passes: `npx tsc --noEmit`
-- [x] 2.2 Production build passes: `npm run build`
-- [x] 2.3 Lint passes: `npm run lint`
-- [x] 2.4 Schema unit tests pass without network access: `npx vitest run tests/validation.test.ts`
+- [x] 2.1 Type check passes: `npx tsc --noEmit` — 38010ac
+- [x] 2.2 Production build passes: `npm run build` — 38010ac
+- [x] 2.3 Lint passes: `npm run lint` — 38010ac
+- [x] 2.4 Schema unit tests pass without network access: `npx vitest run tests/validation.test.ts` — 38010ac
 
 #### Manual
 
-- [x] 2.5 `/dashboard` still renders the company card after the DAL widening
+- [x] 2.5 `/dashboard` still renders the company card after the DAL widening — 38010ac
 
 ### Phase 3: Profile Surface (view + edit)
 
 #### Automated
 
-- [ ] 3.1 Production build passes: `npm run build`
-- [ ] 3.2 Lint passes: `npm run lint`
-- [ ] 3.3 Type check passes: `npx tsc --noEmit`
+- [x] 3.1 Production build passes: `npm run build`
+- [x] 3.2 Lint passes: `npm run lint`
+- [x] 3.3 Type check passes: `npx tsc --noEmit`
 
 #### Manual
 
-- [ ] 3.4 `/dashboard/company` pre-fills current values; saving all four persists across reload
-- [ ] 3.5 A blank field shows its inline error and persists nothing
-- [ ] 3.6 `/dashboard` shows the completeness prompt when blank, summary when complete, with a working link
-- [ ] 3.7 Logged-out access to `/dashboard/company` redirects to `/login`
+- [x] 3.4 `/dashboard/company` pre-fills current values; saving all four persists across reload
+- [x] 3.5 A blank field shows its inline error and persists nothing
+- [x] 3.6 `/dashboard` shows the completeness prompt when blank, summary when complete, with a working link
+- [x] 3.7 Logged-out access to `/dashboard/company` redirects to `/login`
 
 ### Phase 4: Write-Isolation Verification
 

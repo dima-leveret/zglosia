@@ -94,3 +94,20 @@ export function isCompanyProfileComplete(
     (field) => (company[field] ?? '').trim().length > 0
   )
 }
+
+/** Used when there is no company name to type — a blank profile still needs a gate. */
+export const ACCOUNT_DELETION_FALLBACK_PHRASE = 'DELETE'
+
+/**
+ * The exact text an owner must type to confirm account deletion.
+ *
+ * Defined once and imported by BOTH the form and the Server Action. If the two
+ * sides ever computed this separately they could drift, and the gate would
+ * either block a correct confirmation or — far worse — accept a wrong one.
+ */
+export function accountDeletionPhrase(
+  companyName: string | null | undefined
+): string {
+  const trimmed = (companyName ?? '').trim()
+  return trimmed.length > 0 ? trimmed : ACCOUNT_DELETION_FALLBACK_PHRASE
+}

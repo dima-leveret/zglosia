@@ -1,10 +1,12 @@
 'use server'
 
 import { revalidatePath } from 'next/cache'
+import { redirect } from 'next/navigation'
 
 import { verifySession } from '@/lib/dal'
-import { createClient } from '@/lib/supabase/server'
+import { createAdminClient, createClient } from '@/lib/supabase/server'
 import {
+  accountDeletionPhrase,
   CompanyProfileSchema,
   type CompanyProfileField,
   type FormState,
@@ -61,4 +63,75 @@ export async function updateCompanyProfile(
   return {
     message: 'Company profile saved.',
   }
+}
+
+/**
+ * Permanently erases the owner's account (FR-003, RODO erasure).
+ *
+ * Deleting the auth.users row is what does the work: companies.owner_id is
+ * ON DELETE CASCADE, so the tenant row goes with it. Deleting only the company
+ * row would instead orphan the tenant — current_company_id() would return NULL
+ * for a still-signed-in owner, and the provisioning trigger only fires on user
+ * insert, so it would never come back.
+ *
+ * SECURITY — this is the one place in the slice where a service-role client
+ * (which bypasses RLS entirely) serves a user request. The id passed to
+ * deleteUser comes from verifySession() and from nothing else. It must never
+ * be read from FormData, a query param, or a hidden input: an id taken from
+ * the request would let any authenticated owner delete any account.
+ */
+export async function deleteAccount(
+  _prevState: FormState<'confirmation'>,
+  formData: FormData
+): Promise<FormState<'confirmation'>> {
+  const user = await verifySession()
+
+  const supabase = await createClient()
+
+  // Re-read the owner's own company (RLS-scoped) so the expected phrase is
+  // derived server-side. The client's copy is a UI affordance, not authority.
+  const { data: company } = await supabase
+    .from('companies')
+    .select('name')
+    .maybeSingle()
+
+  const expected = accountDeletionPhrase(company?.name)
+  const typed = String(formData.get('confirmation') ?? '').trim()
+
+  if (typed !== expected) {
+    return {
+      errors: {
+        confirmation: [`Type ${expected} exactly to confirm.`],
+      },
+    }
+  }
+
+  const admin = createAdminClient()
+  const { error } = await admin.auth.admin.deleteUser(user.id)
+
+  if (error) {
+    console.error('account deletion failed:', error.status, error.message)
+    return {
+      message: 'Could not delete your account. Please try again.',
+    }
+  }
+
+  // Past this point the account is gone and the outcome is final.
+  //
+  // scope: 'local' clears the cookie without calling the logout endpoint —
+  // that endpoint would be asked to revoke a session for a user who no longer
+  // exists, which can error. Any failure here is logged and ignored on
+  // purpose: reporting "deletion failed" for an account that is already
+  // deleted would strand the owner holding a cookie for nothing.
+  const { error: signOutError } = await supabase.auth.signOut({ scope: 'local' })
+  if (signOutError) {
+    console.error(
+      'sign-out after account deletion failed (non-fatal):',
+      signOutError.message
+    )
+  }
+
+  // Outside any try/catch on purpose: redirect() signals by throwing
+  // NEXT_REDIRECT, so a catch block would swallow it.
+  redirect('/login')
 }

@@ -363,6 +363,16 @@ Negligible at MVP scale. The profile page adds one RLS-scoped single-row read pe
 
 - **Forward-only against the live cloud project.** `.env.local` targets the linked Supabase project and no local instance is running, so `supabase db push` applies DDL to the working database. `supabase db reset` is **not** a safe verification path here — it would wipe live data. The migration is purely additive (new nullable columns, a trigger, grants) so it carries no data-loss risk; rollback is a new compensating migration, never an edit to an applied file.
 - **Grants are intentionally re-stated.** The `grant` is harmless if the privileges already exist, and it makes the requirement explicit in the repo rather than dependent on project-level default-privilege behavior.
+- **"Confirm signup" email template (manual, one-time) — required for re-registration to work.** `signInWithOtp` defaults to `shouldCreateUser: true`, so when an email has no user Supabase treats the call as a **signup** and sends the **Confirm signup** template, not the Magic Link one. F-01 configured only the Magic Link template, which was invisible until this slice made account deletion — and therefore re-registration — reachable. Set Authentication → Email Templates → **Confirm signup** to:
+
+  ```text
+  {{ .RedirectTo }}?token_hash={{ .TokenHash }}&type=email
+  ```
+
+  In other words: make it **identical to the Magic Link template**. That is the form verified working on 2026-07-29. (`type=signup` is also a valid `EmailOtpType` and would be the more literal choice, but it was not the one confirmed against the live project — prefer the proven form.)
+
+  Use `{{ .RedirectTo }}`, not `{{ .SiteURL }}`, for the same reason F-01 documents: `.SiteURL` is pinned to the production origin, so a signup started on `localhost:3000` would land on production. The stock template uses `{{ .ConfirmationURL }}`, which routes through Supabase's own `/auth/v1/verify` endpoint and bypasses `/auth/confirm` entirely — that was the actual failure. No code change was needed; `/auth/confirm` already forwards whatever `EmailOtpType` it receives.
+
 - **Account deletion is irreversible and has no export path.** Deleting the `auth.users` row cascades to `companies` and — once S-02/S-03 land — will cascade to submissions and plans too. Worth revisiting as a RODO data-export requirement before production.
 - This slice **exceeds FR-003 as literally worded** ("usunąć informacje o firmie" = delete company *info*). Full account erasure was chosen deliberately: the flat 1-account-1-company model means deleting only the company row would orphan the tenant, leaving a signed-in owner whose `current_company_id()` is NULL with no way to recover — the auto-provisioning trigger fires only on user insert. Erasure also aligns with the RODO NFR.
 
@@ -425,28 +435,28 @@ Negligible at MVP scale. The profile page adds one RLS-scoped single-row read pe
 
 #### Automated
 
-- [x] 4.1 Full suite green: `npm test`
-- [x] 4.2 Cross-tenant UPDATE denied and target row verified unchanged via admin client
-- [x] 4.3 Cross-tenant DELETE denied and target row verified still present via admin client
-- [x] 4.4 Positive control: own-row update succeeds and advances updated_at
+- [x] 4.1 Full suite green: `npm test` — d9d8eb2
+- [x] 4.2 Cross-tenant UPDATE denied and target row verified unchanged via admin client — d9d8eb2
+- [x] 4.3 Cross-tenant DELETE denied and target row verified still present via admin client — d9d8eb2
+- [x] 4.4 Positive control: own-row update succeeds and advances updated_at — d9d8eb2
 
 #### Manual
 
-- [x] 4.5 Negative control: dropping companies_update_own makes the cross-tenant UPDATE assertion fail, then restore
+- [x] 4.5 Negative control: dropping companies_update_own makes the cross-tenant UPDATE assertion fail, then restore — d9d8eb2
 
 ### Phase 5: Account Deletion
 
 #### Automated
 
-- [ ] 5.1 Production build passes: `npm run build`
-- [ ] 5.2 Lint passes: `npm run lint`
-- [ ] 5.3 Type check passes: `npx tsc --noEmit`
-- [ ] 5.4 Full suite green: `npm test`
+- [x] 5.1 Production build passes: `npm run build`
+- [x] 5.2 Lint passes: `npm run lint`
+- [x] 5.3 Type check passes: `npx tsc --noEmit`
+- [x] 5.4 Full suite green: `npm test`
 
 #### Manual
 
-- [ ] 5.5 Submit stays disabled until the confirmation text matches exactly
-- [ ] 5.6 Confirming deletion signs the owner out and lands on `/login`
-- [ ] 5.7 Both the companies row and the auth.users row are gone from Studio
-- [ ] 5.8 Re-signing in with the same email creates a fresh blank company with no old data
-- [ ] 5.9 A second owner's data is untouched by the deletion
+- [x] 5.5 Submit stays disabled until the confirmation text matches exactly
+- [x] 5.6 Confirming deletion signs the owner out and lands on `/login`
+- [x] 5.7 Both the companies row and the auth.users row are gone from Studio
+- [x] 5.8 Re-signing in with the same email creates a fresh blank company with no old data
+- [x] 5.9 A second owner's data is untouched by the deletion

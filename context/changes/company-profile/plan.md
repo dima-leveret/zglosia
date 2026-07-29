@@ -448,15 +448,15 @@ Negligible at MVP scale. The profile page adds one RLS-scoped single-row read pe
 
 #### Automated
 
-- [x] 5.1 Production build passes: `npm run build`
-- [x] 5.2 Lint passes: `npm run lint`
-- [x] 5.3 Type check passes: `npx tsc --noEmit`
-- [x] 5.4 Full suite green: `npm test`
+- [x] 5.1 Production build passes: `npm run build` — 0384391
+- [x] 5.2 Lint passes: `npm run lint` — 0384391
+- [x] 5.3 Type check passes: `npx tsc --noEmit` — 0384391
+- [x] 5.4 Full suite green: `npm test` — 0384391
 
 #### Manual
 
-- [x] 5.5 Submit stays disabled until the confirmation text matches exactly
-- [x] 5.6 Confirming deletion signs the owner out and lands on `/login`
-- [x] 5.7 Both the companies row and the auth.users row are gone from Studio
-- [x] 5.8 Re-signing in with the same email creates a fresh blank company with no old data
-- [x] 5.9 A second owner's data is untouched by the deletion
+- [x] 5.5 Submit stays disabled until the confirmation text matches exactly — 0384391
+- [x] 5.6 Confirming deletion signs the owner out and lands on `/login` — 0384391
+- [x] 5.7 Both the companies row and the auth.users row are gone from Studio — 0384391
+- [x] 5.8 Re-signing in with the same email creates a fresh blank company with no old data — 0384391
+- [x] 5.9 A second owner's data is untouched by the deletion — 0384391

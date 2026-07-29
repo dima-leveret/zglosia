@@ -159,3 +159,157 @@ describe('per-company tenant isolation', () => {
     expect(a.data).not.toBe(b.data)
   })
 })
+
+/**
+ * S-01 extends the guarantee from reads to WRITES. The company profile is the
+ * first owner-facing mutation in the product, so until this suite existed the
+ * update and delete policies had never been exercised by a test.
+ *
+ * The load-bearing detail: a cross-tenant UPDATE or DELETE matches zero rows
+ * and PostgREST reports SUCCESS with an empty result — the denial is silent.
+ * Asserting on `error` alone would therefore pass even with the policies
+ * dropped. Every attempt below is followed by re-reading owner A's row through
+ * the service-role client and proving it is unchanged; that re-read, not the
+ * error check, is what actually demonstrates isolation.
+ */
+describe('per-company write isolation', () => {
+  const ownerAProfile = {
+    name: 'Owner A Company',
+    industry: 'Retail',
+    description: "Belongs to owner A. Owner B must never be able to touch this.",
+    location: 'Gdańsk',
+  }
+
+  beforeAll(async () => {
+    // Seeded past RLS so the fixture does not depend on the policies under test.
+    const { error } = await admin
+      .from('companies')
+      .update(ownerAProfile)
+      .eq('id', ownerA.companyId)
+    if (error) throw error
+  })
+
+  /** Owner A's row exactly as the database holds it, read past RLS. */
+  async function readOwnerARow() {
+    const { data, error } = await admin
+      .from('companies')
+      .select('id, owner_id, name, industry, description, location, updated_at')
+      .eq('id', ownerA.companyId)
+      .maybeSingle()
+    if (error) throw error
+    return data
+  }
+
+  it("denies owner B an UPDATE of owner A's row, leaving it unchanged", async () => {
+    const before = await readOwnerARow()
+    expect(before).not.toBeNull()
+
+    const { error } = await ownerB.db
+      .from('companies')
+      .update({ name: 'HIJACKED BY OWNER B' })
+      .eq('id', ownerA.companyId)
+
+    // Silent denial: success, zero rows affected.
+    expect(error).toBeNull()
+
+    const after = await readOwnerARow()
+    // The decisive assertion — every column, including updated_at, is intact.
+    expect(after).toEqual(before)
+    expect(after!.name).toBe(ownerAProfile.name)
+  })
+
+  it("denies owner B an unfiltered UPDATE from reaching owner A's row", async () => {
+    // An update with no id filter is scoped by RLS alone. It must rewrite only
+    // owner B's own row, never every row the table holds.
+    const before = await readOwnerARow()
+
+    const { error } = await ownerB.db
+      .from('companies')
+      .update({ name: 'MASS UPDATE BY OWNER B' })
+      .neq('id', '00000000-0000-0000-0000-000000000000')
+
+    expect(error).toBeNull()
+
+    const after = await readOwnerARow()
+    expect(after).toEqual(before)
+
+    // ...while owner B's own row did change, proving the write itself worked
+    // and the isolation above is not a false negative from a no-op statement.
+    const { data: ownerBRow, error: ownerBError } = await admin
+      .from('companies')
+      .select('name')
+      .eq('id', ownerB.companyId)
+      .single()
+    expect(ownerBError).toBeNull()
+    expect(ownerBRow!.name).toBe('MASS UPDATE BY OWNER B')
+  })
+
+  it("denies owner B a DELETE of owner A's row, leaving it present", async () => {
+    const before = await readOwnerARow()
+
+    const { error } = await ownerB.db
+      .from('companies')
+      .delete()
+      .eq('id', ownerA.companyId)
+
+    expect(error).toBeNull()
+
+    const { data: rows, error: existsError } = await admin
+      .from('companies')
+      .select('id')
+      .eq('id', ownerA.companyId)
+    expect(existsError).toBeNull()
+    expect(rows).toHaveLength(1)
+
+    const after = await readOwnerARow()
+    expect(after).toEqual(before)
+  })
+
+  it('lets owner A update their own row and advances updated_at', async () => {
+    // Positive control. Without it, all the denials above would still pass if
+    // writes were broken outright (missing GRANT, wrong policy), and the suite
+    // would report perfect isolation on a table nobody can write to.
+    const before = await readOwnerARow()
+    const description = `Updated by owner A at ${new Date().toISOString()}`
+
+    const { error } = await ownerA.db
+      .from('companies')
+      .update({ description })
+      .eq('owner_id', ownerA.userId)
+
+    expect(error).toBeNull()
+
+    const after = await readOwnerARow()
+    expect(after!.description).toBe(description)
+    expect(new Date(after!.updated_at).getTime()).toBeGreaterThan(
+      new Date(before!.updated_at).getTime()
+    )
+  })
+
+  it('lets owner A delete their own row', async () => {
+    // Runs last: it destroys the fixture the tests above depend on. Proves the
+    // delete policy permits the owner, so the denials are about WHO, not about
+    // DELETE being blocked for everyone.
+    const { error } = await ownerA.db
+      .from('companies')
+      .delete()
+      .eq('owner_id', ownerA.userId)
+
+    expect(error).toBeNull()
+
+    const { data: rows, error: readError } = await admin
+      .from('companies')
+      .select('id')
+      .eq('id', ownerA.companyId)
+    expect(readError).toBeNull()
+    expect(rows).toHaveLength(0)
+
+    // Owner B is untouched by A deleting their own company.
+    const { data: bRows, error: bError } = await admin
+      .from('companies')
+      .select('id')
+      .eq('id', ownerB.companyId)
+    expect(bError).toBeNull()
+    expect(bRows).toHaveLength(1)
+  })
+})

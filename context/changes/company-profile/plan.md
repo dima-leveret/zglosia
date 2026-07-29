@@ -410,29 +410,29 @@ Negligible at MVP scale. The profile page adds one RLS-scoped single-row read pe
 
 #### Automated
 
-- [x] 3.1 Production build passes: `npm run build`
-- [x] 3.2 Lint passes: `npm run lint`
-- [x] 3.3 Type check passes: `npx tsc --noEmit`
+- [x] 3.1 Production build passes: `npm run build` — adca13a
+- [x] 3.2 Lint passes: `npm run lint` — adca13a
+- [x] 3.3 Type check passes: `npx tsc --noEmit` — adca13a
 
 #### Manual
 
-- [x] 3.4 `/dashboard/company` pre-fills current values; saving all four persists across reload
-- [x] 3.5 A blank field shows its inline error and persists nothing
-- [x] 3.6 `/dashboard` shows the completeness prompt when blank, summary when complete, with a working link
-- [x] 3.7 Logged-out access to `/dashboard/company` redirects to `/login`
+- [x] 3.4 `/dashboard/company` pre-fills current values; saving all four persists across reload — adca13a
+- [x] 3.5 A blank field shows its inline error and persists nothing — adca13a
+- [x] 3.6 `/dashboard` shows the completeness prompt when blank, summary when complete, with a working link — adca13a
+- [x] 3.7 Logged-out access to `/dashboard/company` redirects to `/login` — adca13a
 
 ### Phase 4: Write-Isolation Verification
 
 #### Automated
 
-- [ ] 4.1 Full suite green: `npm test`
-- [ ] 4.2 Cross-tenant UPDATE denied and target row verified unchanged via admin client
-- [ ] 4.3 Cross-tenant DELETE denied and target row verified still present via admin client
-- [ ] 4.4 Positive control: own-row update succeeds and advances updated_at
+- [x] 4.1 Full suite green: `npm test`
+- [x] 4.2 Cross-tenant UPDATE denied and target row verified unchanged via admin client
+- [x] 4.3 Cross-tenant DELETE denied and target row verified still present via admin client
+- [x] 4.4 Positive control: own-row update succeeds and advances updated_at
 
 #### Manual
 
-- [ ] 4.5 Negative control: dropping companies_update_own makes the cross-tenant UPDATE assertion fail, then restore
+- [x] 4.5 Negative control: dropping companies_update_own makes the cross-tenant UPDATE assertion fail, then restore
 
 ### Phase 5: Account Deletion
 

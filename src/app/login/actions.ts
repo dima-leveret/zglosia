@@ -10,8 +10,24 @@ import { LoginSchema, type FormState } from '@/lib/validation'
  * into a genuine Supabase email and hand them the one-time token. Pin it to a
  * server-side value instead, and keep this origin in Supabase's redirect
  * allow-list (see supabase/config.toml [auth]).
+ *
+ * `VERCEL_PROJECT_PRODUCTION_URL` is the platform-injected production domain
+ * (host only, no scheme) — still a server-side value, never request-derived. It
+ * backstops a forgotten `NEXT_PUBLIC_SITE_URL` on Vercel so a deploy cannot
+ * silently mail out `http://localhost:3000` links; localhost stays the default
+ * only when neither is set (local dev).
  */
-const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? 'http://localhost:3000'
+function resolveSiteUrl(): string {
+  if (process.env.NEXT_PUBLIC_SITE_URL) {
+    return process.env.NEXT_PUBLIC_SITE_URL
+  }
+  if (process.env.VERCEL_PROJECT_PRODUCTION_URL) {
+    return `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`
+  }
+  return 'http://localhost:3000'
+}
+
+const SITE_URL = resolveSiteUrl()
 
 /**
  * Validates the submitted email and asks Supabase to send a magic link pointed

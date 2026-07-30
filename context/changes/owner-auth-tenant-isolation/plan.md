@@ -394,10 +394,14 @@ Negligible at MVP scale (low QPS, small data per shape-notes). Proxy runs on eve
 
 - [x] 3.1 Build passes: `npm run build` — a09cdf1
 - [x] 3.2 Lint passes: `npm run lint` — a09cdf1
-- [x] 3.3 Invalid-email input to the Server Action returns a Zod field error — a09cdf1
 
 #### Manual
 
+> Impl-review F9 (2026-07-30): 3.3 was filed under Automated, but a09cdf1
+> predates Vitest and no such test was ever written — the plan's own wording
+> allowed "otherwise manual". Moved here to match what actually happened.
+
+- [x] 3.3 Invalid-email input to the Server Action returns a Zod field error — a09cdf1
 - [x] 3.4 Full magic-link login lands on `/dashboard` showing the owner's company — a09cdf1
 - [x] 3.5 `/dashboard` displays the correct company row (session + RLS happy path) — a09cdf1
 - [x] 3.6 Logout returns to `/login`; `/dashboard` then redirects to `/login` — a09cdf1

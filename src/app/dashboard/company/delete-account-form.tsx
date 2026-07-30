@@ -2,7 +2,7 @@
 
 import { useActionState, useState } from 'react'
 
-import { accountDeletionPhrase } from '@/lib/validation'
+import { accountDeletionPhrase } from '@/lib/account-deletion'
 
 import { deleteAccount } from './actions'
 
@@ -49,11 +49,19 @@ export function DeleteAccountForm({ companyName }: { companyName: string | null 
           value={typed}
           onChange={(event) => setTyped(event.target.value)}
           autoComplete="off"
+          aria-invalid={!!state?.errors?.confirmation}
+          aria-describedby={
+            state?.errors?.confirmation ? 'confirmation-error' : undefined
+          }
           className="h-11 rounded-lg border border-red-300 bg-white px-3 text-black outline-none focus:border-red-500 dark:border-red-800 dark:bg-zinc-900 dark:text-zinc-50"
         />
 
         {state?.errors?.confirmation && (
-          <p className="text-sm text-red-700 dark:text-red-400">
+          <p
+            id="confirmation-error"
+            role="alert"
+            className="text-sm text-red-700 dark:text-red-400"
+          >
             {state.errors.confirmation[0]}
           </p>
         )}

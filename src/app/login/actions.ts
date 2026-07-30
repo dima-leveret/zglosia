@@ -1,9 +1,17 @@
 'use server'
 
-import { headers } from 'next/headers'
-
 import { createClient } from '@/lib/supabase/server'
 import { LoginSchema, type FormState } from '@/lib/validation'
+
+/**
+ * The magic link's destination must never be derived from the request. Next's
+ * Server Action CSRF check only requires `Origin` to *match* `Host` — it pins
+ * neither to our real domain — so a spoofed pair would put an attacker's host
+ * into a genuine Supabase email and hand them the one-time token. Pin it to a
+ * server-side value instead, and keep this origin in Supabase's redirect
+ * allow-list (see supabase/config.toml [auth]).
+ */
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? 'http://localhost:3000'
 
 /**
  * Validates the submitted email and asks Supabase to send a magic link pointed
@@ -27,13 +35,12 @@ export async function sendMagicLink(
 
   const { email } = validatedFields.data
 
-  const origin = (await headers()).get('origin') ?? ''
   const supabase = await createClient()
 
   const { error } = await supabase.auth.signInWithOtp({
     email,
     options: {
-      emailRedirectTo: `${origin}/auth/confirm`,
+      emailRedirectTo: `${SITE_URL}/auth/confirm`,
     },
   })
 

@@ -12,13 +12,22 @@ const labelClass = 'text-sm font-medium text-zinc-700 dark:text-zinc-300'
 const controlClass =
   'rounded-lg border border-zinc-300 bg-white px-3 py-2 text-black outline-none focus:border-zinc-500 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-50'
 
-function FieldError({ messages }: { messages?: string[] }) {
+/**
+ * `role="alert"` is not optional here. The inputs deliberately carry no HTML
+ * `required` (see below), so these server messages are the only error channel
+ * that exists — without an alert role and an aria-describedby link from the
+ * control, a screen-reader user submits an invalid form and hears nothing at
+ * all, then hears only the label on tabbing back.
+ */
+function FieldError({ id, messages }: { id: string; messages?: string[] }) {
   if (!messages?.length) {
     return null
   }
 
   return (
-    <p className="text-sm text-red-600 dark:text-red-400">{messages[0]}</p>
+    <p id={id} role="alert" className="text-sm text-red-600 dark:text-red-400">
+      {messages[0]}
+    </p>
   )
 }
 
@@ -51,9 +60,11 @@ export function CompanyProfileForm({ company }: { company: CompanyProfile }) {
           maxLength={120}
           defaultValue={company.name ?? ''}
           placeholder="Kawiarnia Pod Lipą"
+          aria-invalid={!!state?.errors?.name}
+          aria-describedby={state?.errors?.name ? 'name-error' : undefined}
           className={`h-11 ${controlClass}`}
         />
-        <FieldError messages={state?.errors?.name} />
+        <FieldError id="name-error" messages={state?.errors?.name} />
       </div>
 
       <div className="flex flex-col gap-2">
@@ -67,9 +78,13 @@ export function CompanyProfileForm({ company }: { company: CompanyProfile }) {
           maxLength={120}
           defaultValue={company.industry ?? ''}
           placeholder="Gastronomia"
+          aria-invalid={!!state?.errors?.industry}
+          aria-describedby={
+            state?.errors?.industry ? 'industry-error' : undefined
+          }
           className={`h-11 ${controlClass}`}
         />
-        <FieldError messages={state?.errors?.industry} />
+        <FieldError id="industry-error" messages={state?.errors?.industry} />
       </div>
 
       <div className="flex flex-col gap-2">
@@ -83,9 +98,13 @@ export function CompanyProfileForm({ company }: { company: CompanyProfile }) {
           maxLength={120}
           defaultValue={company.location ?? ''}
           placeholder="Wrocław"
+          aria-invalid={!!state?.errors?.location}
+          aria-describedby={
+            state?.errors?.location ? 'location-error' : undefined
+          }
           className={`h-11 ${controlClass}`}
         />
-        <FieldError messages={state?.errors?.location} />
+        <FieldError id="location-error" messages={state?.errors?.location} />
       </div>
 
       <div className="flex flex-col gap-2">
@@ -99,12 +118,26 @@ export function CompanyProfileForm({ company }: { company: CompanyProfile }) {
           maxLength={2000}
           defaultValue={company.description ?? ''}
           placeholder="What the business does, who it serves, anything that shapes the improvements you'd act on."
+          aria-invalid={!!state?.errors?.description}
+          // The hint stays in the description list either way; the error is
+          // appended so it is read after it rather than replacing it.
+          aria-describedby={
+            state?.errors?.description
+              ? 'description-hint description-error'
+              : 'description-hint'
+          }
           className={controlClass}
         />
-        <p className="text-xs text-zinc-500 dark:text-zinc-500">
+        <p
+          id="description-hint"
+          className="text-xs text-zinc-500 dark:text-zinc-500"
+        >
           This context is used when generating your action plan.
         </p>
-        <FieldError messages={state?.errors?.description} />
+        <FieldError
+          id="description-error"
+          messages={state?.errors?.description}
+        />
       </div>
 
       <button

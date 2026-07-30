@@ -3,6 +3,8 @@ import { randomUUID } from 'node:crypto'
 import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 
+import { requireLocalDb } from './support/require-local-db'
+
 /**
  * Phase 1 gate for S-01: proves the company_profile migration actually landed
  * on the target database.
@@ -26,6 +28,8 @@ if (!url || !anonKey || !serviceRoleKey) {
       'NEXT_PUBLIC_SUPABASE_ANON_KEY and SUPABASE_SERVICE_ROLE_KEY (loaded from .env.local).'
   )
 }
+
+requireLocalDb(url, 'tests/schema.test.ts')
 
 /** Service-role client: bypasses RLS. Test-only. */
 const admin = createClient(url, serviceRoleKey, {

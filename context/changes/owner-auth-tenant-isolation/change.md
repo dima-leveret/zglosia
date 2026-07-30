@@ -1,9 +1,9 @@
 ---
 change_id: owner-auth-tenant-isolation
 title: Owner auth (magic link) + per-company tenant isolation foundation
-status: implemented
+status: impl_reviewed
 created: 2026-07-26
-updated: 2026-07-26
+updated: 2026-07-30
 archived_at: null
 ---
 

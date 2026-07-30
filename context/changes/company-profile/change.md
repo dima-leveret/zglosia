@@ -1,9 +1,9 @@
 ---
 change_id: company-profile
 title: Company profile — owner CRUD for company data
-status: implemented
+status: impl_reviewed
 created: 2026-07-29
-updated: 2026-07-29
+updated: 2026-07-30
 archived_at: null
 ---
 

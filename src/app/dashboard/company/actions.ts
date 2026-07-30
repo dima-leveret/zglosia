@@ -3,10 +3,10 @@
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 
+import { accountDeletionPhrase } from '@/lib/account-deletion'
 import { verifySession } from '@/lib/dal'
 import { createAdminClient, createClient } from '@/lib/supabase/server'
 import {
-  accountDeletionPhrase,
   CompanyProfileSchema,
   type CompanyProfileField,
   type FormState,
@@ -45,13 +45,26 @@ export async function updateCompanyProfile(
   // over-matching SELECT leaks, but an over-matching UPDATE rewrites every
   // visible row. RLS is still the security boundary; this is the seatbelt.
   // Do not "simplify" it away for consistency with the read path.
-  const { error } = await supabase
+  // .select('id') is not decoration: an UPDATE matching zero rows comes back
+  // as { data: null, error: null }, so without it a write that touched nothing
+  // is indistinguishable from a successful one and the owner is told their
+  // profile was saved. Asking for the affected row is what makes the no-op
+  // visible. (Same silent-denial shape the isolation suite pins.)
+  const { data, error } = await supabase
     .from('companies')
     .update(validatedFields.data)
     .eq('owner_id', user.id)
+    .select('id')
 
   if (error) {
     console.error('company profile update failed:', error.code, error.message)
+    return {
+      message: 'Could not save your company profile. Please try again.',
+    }
+  }
+
+  if (!data?.length) {
+    console.error('company profile update matched no row for owner', user.id)
     return {
       message: 'Could not save your company profile. Please try again.',
     }
@@ -90,10 +103,26 @@ export async function deleteAccount(
 
   // Re-read the owner's own company (RLS-scoped) so the expected phrase is
   // derived server-side. The client's copy is a UI affordance, not authority.
-  const { data: company } = await supabase
+  const { data: company, error: readError } = await supabase
     .from('companies')
     .select('name')
     .maybeSingle()
+
+  // Fail closed rather than falling through. If this read errors, company is
+  // undefined and the expected phrase would silently degrade to the generic
+  // fallback while the form still shows the real company name — the owner's
+  // correct input would be rejected, and the gate would stop being specific to
+  // their company. A transient failure must not reshape the confirmation.
+  if (readError) {
+    console.error(
+      'account deletion pre-check failed:',
+      readError.code,
+      readError.message
+    )
+    return {
+      message: 'Could not verify your account. Please try again.',
+    }
+  }
 
   const expected = accountDeletionPhrase(company?.name)
   const typed = String(formData.get('confirmation') ?? '').trim()

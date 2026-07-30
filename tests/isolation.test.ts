@@ -304,6 +304,12 @@ describe('per-company write isolation', () => {
     // (23505) or the FK (23503) before the policy is ever consulted. So
     // provision a third user and clear the row its trigger created — now the
     // policy is the only thing that can refuse the insert.
+    //
+    // Since 20260730190000_narrow_company_write_grants.sql the INSERT privilege
+    // is revoked outright, so 42501 now arrives from the grant layer before the
+    // policy is consulted. Same code, earlier gate: this case proves owner B
+    // cannot forge a tenant, not specifically that `with check` is what stops
+    // them. The policy is retained as the second layer.
     const email = `rls-victim-${randomUUID()}@example.com`
     const { data: created, error: createError } = await admin.auth.admin.createUser({
       email,

@@ -8,6 +8,7 @@
     "start": "next start",
     "lint": "eslint",
     "test": "vitest run",
+    "test:remote": "ALLOW_REMOTE_TEST_DB=1 vitest run",
     "test:watch": "vitest"
   },
   "dependencies": {

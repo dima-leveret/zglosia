@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest'
 import {
   CompanyProfileSchema,
   isCompanyProfileComplete,
-} from '../src/lib/validation'
+} from '@/lib/validation'
 
 /**
  * Pure unit tests — no network, no Supabase. These pin the contract the profile

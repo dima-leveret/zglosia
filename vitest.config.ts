@@ -1,3 +1,5 @@
+import { fileURLToPath } from 'node:url'
+
 import { loadEnv } from 'vite'
 import { defineConfig } from 'vitest/config'
 
@@ -15,6 +17,13 @@ import { defineConfig } from 'vitest/config'
  * require-local-db.ts).
  */
 export default defineConfig(({ mode }) => ({
+  // Vite does not read tsconfig `paths`, so without this the tests would have
+  // to reach into src/ with deep relative imports — which AGENTS.md forbids.
+  resolve: {
+    alias: {
+      '@': fileURLToPath(new URL('./src', import.meta.url)),
+    },
+  },
   test: {
     environment: 'node',
     include: ['tests/**/*.test.ts'],

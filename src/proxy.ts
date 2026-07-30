@@ -12,36 +12,49 @@ export async function proxy(request: NextRequest) {
   // intermittently logged out.
   let supabaseResponse = NextResponse.next({ request })
 
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        getAll() {
-          return request.cookies.getAll()
-        },
-        setAll(cookiesToSet) {
-          cookiesToSet.forEach(({ name, value }) =>
-            request.cookies.set(name, value)
-          )
-          supabaseResponse = NextResponse.next({ request })
-          cookiesToSet.forEach(({ name, value, options }) =>
-            supabaseResponse.cookies.set(name, value, options)
-          )
-        },
-      },
-    }
-  )
-
-  // Load-bearing: no logic between client creation and getUser(). getUser()
-  // revalidates the session against Supabase (never trust getSession() here).
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-
   const isProtected = PROTECTED_PREFIXES.some((prefix) =>
     request.nextUrl.pathname.startsWith(prefix)
   )
+
+  let user = null
+
+  try {
+    const supabase = createServerClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      {
+        cookies: {
+          getAll() {
+            return request.cookies.getAll()
+          },
+          setAll(cookiesToSet) {
+            cookiesToSet.forEach(({ name, value }) =>
+              request.cookies.set(name, value)
+            )
+            supabaseResponse = NextResponse.next({ request })
+            cookiesToSet.forEach(({ name, value, options }) =>
+              supabaseResponse.cookies.set(name, value, options)
+            )
+          },
+        },
+      }
+    )
+
+    // Load-bearing: no logic between client creation and getUser(). getUser()
+    // revalidates the session against Supabase (never trust getSession() here).
+    const {
+      data: { user: sessionUser },
+    } = await supabase.auth.getUser()
+    user = sessionUser
+  } catch (error) {
+    // Supabase unreachable, or env misconfigured (the `!` assertions above).
+    // The proxy matcher covers nearly every route, so throwing here would 500
+    // the whole site — including /login, the page a user needs to recover.
+    // Fail open on public routes; protected ones fall through to the redirect
+    // below with `user` still null, and the DAL re-checks on every read anyway.
+    console.error('proxy: session refresh failed:', error)
+    if (!isProtected) return supabaseResponse
+  }
 
   if (!user && isProtected) {
     const url = request.nextUrl.clone()

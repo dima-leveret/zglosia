@@ -3,6 +3,8 @@ import { randomUUID } from 'node:crypto'
 import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 
+import { requireLocalDb } from './support/require-local-db'
+
 /**
  * The executable guard on ZGŁOSIA's core security promise (PRD FR-001, NFR
  * "dane jednej firmy są nieosiągalne dla innej"): owner B must never be able to
@@ -25,6 +27,8 @@ if (!url || !anonKey || !serviceRoleKey) {
       'NEXT_PUBLIC_SUPABASE_ANON_KEY and SUPABASE_SERVICE_ROLE_KEY (loaded from .env.local).'
   )
 }
+
+requireLocalDb(url, 'tests/isolation.test.ts')
 
 /** Service-role client: bypasses RLS. Test-only — never an owner-facing read. */
 const admin = createClient(url, serviceRoleKey, {
@@ -165,12 +169,16 @@ describe('per-company tenant isolation', () => {
  * first owner-facing mutation in the product, so until this suite existed the
  * update and delete policies had never been exercised by a test.
  *
- * The load-bearing detail: a cross-tenant UPDATE or DELETE matches zero rows
- * and PostgREST reports SUCCESS with an empty result — the denial is silent.
+ * The load-bearing detail: a cross-tenant UPDATE matches zero rows and
+ * PostgREST reports SUCCESS with an empty result — the denial is silent.
  * Asserting on `error` alone would therefore pass even with the policies
  * dropped. Every attempt below is followed by re-reading owner A's row through
  * the service-role client and proving it is unchanged; that re-read, not the
  * error check, is what actually demonstrates isolation.
+ *
+ * DELETE is the exception: migration 20260730104500 revokes it from
+ * `authenticated` outright (review finding F3), so those attempts fail loudly
+ * at the grant layer with 42501 — for owner B and owner A alike.
  */
 describe('per-company write isolation', () => {
   const ownerAProfile = {
@@ -247,12 +255,15 @@ describe('per-company write isolation', () => {
   it("denies owner B a DELETE of owner A's row, leaving it present", async () => {
     const before = await readOwnerARow()
 
+    // DELETE is revoked from `authenticated` entirely (migration
+    // 20260730104500), so this is refused at the grant layer with 42501 rather
+    // than silently matching zero rows.
     const { error } = await ownerB.db
       .from('companies')
       .delete()
       .eq('id', ownerA.companyId)
 
-    expect(error).toBeNull()
+    expect(error?.code).toBe('42501')
 
     const { data: rows, error: existsError } = await admin
       .from('companies')
@@ -286,30 +297,59 @@ describe('per-company write isolation', () => {
     )
   })
 
-  it('lets owner A delete their own row', async () => {
-    // Runs last: it destroys the fixture the tests above depend on. Proves the
-    // delete policy permits the owner, so the denials are about WHO, not about
-    // DELETE being blocked for everyone.
+  it('denies owner B an INSERT that forges another owner_id', async () => {
+    // The `with check` on companies_insert_own is the clause that stops one
+    // owner from minting a tenant for someone else. It needs a free owner_id to
+    // aim at: reusing owner A's would risk tripping the unique constraint
+    // (23505) or the FK (23503) before the policy is ever consulted. So
+    // provision a third user and clear the row its trigger created — now the
+    // policy is the only thing that can refuse the insert.
+    const email = `rls-victim-${randomUUID()}@example.com`
+    const { data: created, error: createError } = await admin.auth.admin.createUser({
+      email,
+      password: randomUUID(),
+      email_confirm: true,
+    })
+    expect(createError).toBeNull()
+    const victimId = created!.user!.id
+
+    try {
+      await admin.from('companies').delete().eq('owner_id', victimId)
+
+      const { error } = await ownerB.db
+        .from('companies')
+        .insert({ owner_id: victimId, name: 'FORGED BY OWNER B' })
+
+      expect(error?.code).toBe('42501')
+
+      const { data: rows, error: readError } = await admin
+        .from('companies')
+        .select('id')
+        .eq('owner_id', victimId)
+      expect(readError).toBeNull()
+      expect(rows).toHaveLength(0)
+    } finally {
+      await admin.auth.admin.deleteUser(victimId)
+    }
+  })
+
+  it('denies owner A a DELETE of their OWN row', async () => {
+    // Owners must not be able to erase their own tenant: nothing re-provisions
+    // it (the trigger fires only on auth.users insert), so a successful delete
+    // would strand the account on the "no company" branch forever. Erasure is
+    // the exclusive job of auth.admin.deleteUser + ON DELETE CASCADE.
     const { error } = await ownerA.db
       .from('companies')
       .delete()
       .eq('owner_id', ownerA.userId)
 
-    expect(error).toBeNull()
+    expect(error?.code).toBe('42501')
 
     const { data: rows, error: readError } = await admin
       .from('companies')
       .select('id')
       .eq('id', ownerA.companyId)
     expect(readError).toBeNull()
-    expect(rows).toHaveLength(0)
-
-    // Owner B is untouched by A deleting their own company.
-    const { data: bRows, error: bError } = await admin
-      .from('companies')
-      .select('id')
-      .eq('id', ownerB.companyId)
-    expect(bError).toBeNull()
-    expect(bRows).toHaveLength(1)
+    expect(rows).toHaveLength(1)
   })
 })

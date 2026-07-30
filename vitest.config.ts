@@ -7,6 +7,12 @@ import { defineConfig } from 'vitest/config'
  * process.env. Vitest does not read `.env.local` on its own; `loadEnv` with an
  * empty prefix pulls in every var (not just VITE_-prefixed ones) from
  * `.env`/`.env.local`/`.env.<mode>` and hands them to the test env.
+ *
+ * `.env.local` is also what `npm run dev` reads, so it normally points at the
+ * hosted project. Keep test credentials in `.env.test.local` instead — loadEnv
+ * gives `.env.<mode>.local` precedence over `.env.local`, and the DB-touching
+ * suites refuse to run against a non-local host anyway (tests/support/
+ * require-local-db.ts).
  */
 export default defineConfig(({ mode }) => ({
   test: {

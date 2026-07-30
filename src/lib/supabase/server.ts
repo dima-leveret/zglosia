@@ -1,3 +1,9 @@
+// This module exports the service-role client, which bypasses RLS entirely.
+// The build-time guard is what keeps it — and SUPABASE_SERVICE_ROLE_KEY — out
+// of any client bundle, rather than relying on the incidental `next/headers`
+// import to break such a build.
+import 'server-only'
+
 import { createClient as createSupabaseClient } from '@supabase/supabase-js'
 import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'

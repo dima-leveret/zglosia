@@ -156,6 +156,9 @@ max_indexes = 5
 enabled = true
 # The base URL of your website. Used as an allow-list for redirects and for constructing URLs used
 # in emails.
+# WARNING: this value is local-only as written. `supabase config push` would
+# overwrite the hosted project's Site URL with localhost — set it to the
+# production origin before ever running that command against the linked project.
 site_url = "http://localhost:3000"
 # The public URL that Auth serves on. Defaults to the API external URL with `/auth/v1` appended.
 # external_url = ""
@@ -227,7 +230,12 @@ enable_signup = true
 # addresses. If disabled, only the new email is required to confirm.
 double_confirm_changes = true
 # If enabled, users need to confirm their email address before signing in.
-enable_confirmations = false
+# MUST stay true for this passwordless app. With autoconfirm (false), a
+# signInWithOtp for an unknown email creates the user and confirms it inline
+# without sending any mail, so a first-time owner sees "check your inbox" and
+# never receives a link. Keep the hosted project's Auth > "Confirm email"
+# setting on for the same reason.
+enable_confirmations = true
 # If enabled, users will need to reauthenticate or have logged in recently to change their password.
 secure_password_change = false
 # Controls the minimum amount of time that must pass before sending another signup confirmation or password reset email.
@@ -246,6 +254,19 @@ otp_expiry = 3600
 # pass = "env(SENDGRID_API_KEY)"
 # admin_email = "admin@email.com"
 # sender_name = "Admin"
+
+# Sign-in mail for an email that already has an account.
+[auth.email.template.magic_link]
+subject = "Sign in to ZGŁOSIA"
+content_path = "./supabase/templates/magic_link.html"
+
+# Sign-in mail for an email GoTrue has never seen — same wording and same
+# token_hash link, because "sign in" is the only entry point this app offers.
+# Without this override the default "Confirm your signup" template ships a
+# {{ .ConfirmationURL }} link that /auth/confirm cannot complete.
+[auth.email.template.confirmation]
+subject = "Sign in to ZGŁOSIA"
+content_path = "./supabase/templates/confirmation.html"
 
 # Uncomment to customize email template
 # [auth.email.template.invite]

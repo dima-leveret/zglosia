@@ -485,27 +485,27 @@ The one non-additive consequence is the `on delete cascade` from `submissions.co
 
 #### Automated
 
-- [x] 1.1 `npx supabase migration list --linked` shows the migration applied remotely
+- [x] 1.1 `npx supabase migration list --linked` shows the migration applied remotely — 1b41851
 - [ ] 1.2 Replay from empty (`npx supabase db reset`) — BLOCKED, no container runtime; record, do not tick by inference
-- [x] 1.3 Schema assertions pass, including the four privilege negatives (`npm run test:remote`)
-- [x] 1.4 Generated types include `submissions` and `submission_source`
-- [x] 1.5 Linting passes (`npm run lint`)
+- [x] 1.3 Schema assertions pass, including the four privilege negatives (`npm run test:remote`) — 1b41851
+- [x] 1.4 Generated types include `submissions` and `submission_source` — 1b41851
+- [x] 1.5 Linting passes (`npm run lint`) — 1b41851
 
 #### Manual
 
-- [x] 1.6 Studio shows RLS enabled with three policies and no update policy
-- [x] 1.7 `authenticated` has select, delete, and column-scoped insert — no update
-- [x] 1.8 `anon` has no privileges on `submissions` at all
-- [x] 1.9 Deleting a test auth user removes that user's submissions
+- [x] 1.6 Studio shows RLS enabled with three policies and no update policy — 1b41851
+- [x] 1.7 `authenticated` has select, delete, and column-scoped insert — no update — 1b41851
+- [x] 1.8 `anon` has no privileges on `submissions` at all — 1b41851
+- [x] 1.9 Deleting a test auth user removes that user's submissions — 1b41851
 
 ### Phase 2: Validation + Data Access Contract
 
 #### Automated
 
-- [ ] 2.1 Type checking passes (`npx tsc --noEmit`)
-- [ ] 2.2 Unit tests pass (`npm test`)
-- [ ] 2.3 Linting passes (`npm run lint`)
-- [ ] 2.4 `getSubmissions()` returns `source` typed as `'manual' | 'form'`
+- [x] 2.1 Type checking passes (`npx tsc --noEmit`)
+- [x] 2.2 Unit tests pass (`npm test`)
+- [x] 2.3 Linting passes (`npm run lint`)
+- [x] 2.4 `getSubmissions()` returns `source` typed as `'manual' | 'form'`
 
 #### Manual
 

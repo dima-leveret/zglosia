@@ -4,6 +4,7 @@ import { cache } from 'react'
 import { redirect } from 'next/navigation'
 
 import { createClient } from '@/lib/supabase/server'
+import type { Database } from '@/lib/supabase/database.types'
 
 /**
  * The single auth gate. Every owner-facing data request calls this first.
@@ -47,4 +48,76 @@ export const getCompany = cache(async () => {
   }
 
   return data
+})
+
+/**
+ * How many submissions one page render will show. The list is capped rather
+ * than paginated: the owner's next action is "generate a plan from all of
+ * these", not "page through them", so offset links would be scaffolding for a
+ * workflow the product does not have.
+ */
+export const SUBMISSION_LIST_LIMIT = 100
+
+/**
+ * One row as the list renders it. Derived from the generated schema rather than
+ * hand-written, so dropping a column from the select below is a type error in
+ * the component instead of an undefined at runtime.
+ */
+export type SubmissionListRow = Pick<
+  Database['public']['Tables']['submissions']['Row'],
+  'id' | 'content' | 'source' | 'created_at'
+>
+
+/**
+ * The newest submissions for the caller's company, plus the exact total.
+ *
+ * Same filter-free read convention as getCompany: RLS scopes the query to
+ * company_id = current_company_id(), so no explicit company filter appears
+ * here. The isolation is in Postgres.
+ *
+ * The count rides along on the same request (`count: 'exact'` on a limited
+ * select returns the *unlimited* total) so the page can say "showing the latest
+ * 100 of N" without a second round trip.
+ */
+export const getSubmissions = cache(async () => {
+  await verifySession()
+
+  const supabase = await createClient()
+  const { data, count, error } = await supabase
+    .from('submissions')
+    .select('id, content, source, created_at', { count: 'exact' })
+    .order('created_at', { ascending: false })
+    // Tiebreaker, not decoration: rows inserted in the same statement share
+    // created_at, and this pair matches submissions_company_created_idx exactly
+    // so the read stays an index scan.
+    .order('id', { ascending: false })
+    .limit(SUBMISSION_LIST_LIMIT)
+
+  if (error) {
+    throw error
+  }
+
+  return {
+    submissions: (data ?? []) as SubmissionListRow[],
+    total: count ?? 0,
+  }
+})
+
+/**
+ * Just the total, for the dashboard. `head: true` sends no rows back — the
+ * dashboard needs the number, not the content.
+ */
+export const getSubmissionCount = cache(async () => {
+  await verifySession()
+
+  const supabase = await createClient()
+  const { count, error } = await supabase
+    .from('submissions')
+    .select('id', { count: 'exact', head: true })
+
+  if (error) {
+    throw error
+  }
+
+  return count ?? 0
 })

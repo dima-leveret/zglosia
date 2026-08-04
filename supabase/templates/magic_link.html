@@ -1,0 +1,20 @@
+<!--
+  Sent by signInWithOtp() when the email already has an account.
+
+  The link must carry `token_hash` (NOT `{{ .ConfirmationURL }}`, and NOT
+  `{{ .Token }}` — that is the 6-digit OTP) so /auth/confirm can complete the
+  sign-in server-side with verifyOtp. `type=email` is the token-hash type that
+  matches both confirmation and recovery tokens, so this template and
+  confirmation.html can stay byte-identical in their link.
+
+  `{{ .RedirectTo }}` is the emailRedirectTo the Server Action pinned to a
+  server-side origin — using `{{ .SiteURL }}` instead would send links requested
+  from localhost to production.
+-->
+<h2>Sign in to ZGŁOSIA</h2>
+
+<p>Click the link below to sign in. It expires in one hour and works only once.</p>
+
+<p><a href="{{ .RedirectTo }}?token_hash={{ .TokenHash }}&type=email">Sign in to ZGŁOSIA</a></p>
+
+<p>If you didn't request this email, you can safely ignore it.</p>

@@ -1,0 +1,20 @@
+<!--
+  "Confirm signup" — sent by signInWithOtp() when the email has NO account yet.
+
+  This app is passwordless-only: there is no separate sign-up form, so a first
+  visit and a return visit are the same action to the owner. GoTrue does not see
+  it that way — its /otp handler forwards unknown emails to the signup path,
+  which sends THIS template instead of magic_link.html. Keeping the two
+  identical is what makes "sign in" behave the same for a brand-new email and
+  for one that was deleted and is signing up again.
+
+  See magic_link.html for why the link is built from `token_hash` +
+  `{{ .RedirectTo }}`.
+-->
+<h2>Sign in to ZGŁOSIA</h2>
+
+<p>Click the link below to sign in. It expires in one hour and works only once.</p>
+
+<p><a href="{{ .RedirectTo }}?token_hash={{ .TokenHash }}&type=email">Sign in to ZGŁOSIA</a></p>
+
+<p>If you didn't request this email, you can safely ignore it.</p>

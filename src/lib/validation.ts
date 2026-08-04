@@ -27,6 +27,16 @@ export type FormState<TFields extends string = string> =
   | {
       errors?: Partial<Record<TFields, string[]>>
       message?: string
+      /**
+       * The submitted values, echoed back so a rejected form can re-fill
+       * itself. Only forms that have no stored row to re-fill from need this:
+       * React resets an uncontrolled form once its action completes and does
+       * not distinguish a success from a validation failure, so without an
+       * echo a rejected submission is simply erased. Populate it on failure
+       * and leave it absent on success — the reset then clears the form, which
+       * is what success should look like.
+       */
+      values?: Partial<Record<TFields, string>>
     }
   | undefined
 

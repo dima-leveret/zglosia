@@ -1,6 +1,6 @@
 import Link from 'next/link'
 
-import { getCompany } from '@/lib/dal'
+import { getCompany, getSubmissionCount } from '@/lib/dal'
 import { isCompanyProfileComplete } from '@/lib/validation'
 
 import { logout } from './actions'
@@ -16,6 +16,7 @@ export default async function DashboardPage() {
   // Every account starts with a blank auto-provisioned row, so this is the
   // default state for a new owner — not an edge case.
   const profileComplete = isCompanyProfileComplete(company)
+  const submissionCount = await getSubmissionCount()
 
   return (
     <main className="flex flex-1 flex-col items-center justify-center gap-6 bg-zinc-50 px-6 py-10 dark:bg-black">
@@ -61,11 +62,31 @@ export default async function DashboardPage() {
               </div>
             )}
 
+            {/* The count is what tells the owner whether they have enough
+                collected to be worth acting on — it reads naturally at zero
+                rather than showing a bare "0". */}
+            <p className="text-sm text-zinc-600 dark:text-zinc-400">
+              {submissionCount === 0
+                ? 'No submissions collected yet.'
+                : submissionCount === 1
+                  ? '1 submission collected.'
+                  : `${submissionCount} submissions collected.`}
+            </p>
+
             <Link
               href="/dashboard/company"
               className="flex h-11 w-full items-center justify-center rounded-full bg-foreground px-5 text-sm font-medium text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc]"
             >
               {profileComplete ? 'Edit company profile' : 'Complete your profile'}
+            </Link>
+
+            <Link
+              href="/dashboard/submissions"
+              className="flex h-11 w-full items-center justify-center rounded-full border border-zinc-300 px-5 text-sm font-medium transition-colors hover:bg-black/[.04] dark:border-zinc-700 dark:hover:bg-white/[.06]"
+            >
+              {submissionCount === 0
+                ? 'Add your first submission'
+                : 'View submissions'}
             </Link>
           </>
         ) : (

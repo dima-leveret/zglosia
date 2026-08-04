@@ -502,10 +502,10 @@ The one non-additive consequence is the `on delete cascade` from `submissions.co
 
 #### Automated
 
-- [x] 2.1 Type checking passes (`npx tsc --noEmit`)
-- [x] 2.2 Unit tests pass (`npm test`)
-- [x] 2.3 Linting passes (`npm run lint`)
-- [x] 2.4 `getSubmissions()` returns `source` typed as `'manual' | 'form'`
+- [x] 2.1 Type checking passes (`npx tsc --noEmit`) — ed2a63a
+- [x] 2.2 Unit tests pass (`npm test`) — ed2a63a
+- [x] 2.3 Linting passes (`npm run lint`) — ed2a63a
+- [x] 2.4 `getSubmissions()` returns `source` typed as `'manual' | 'form'` — ed2a63a
 
 #### Manual
 
@@ -515,21 +515,21 @@ The one non-additive consequence is the `on delete cascade` from `submissions.co
 
 #### Automated
 
-- [ ] 3.1 Type checking passes (`npx tsc --noEmit`)
-- [ ] 3.2 Linting passes (`npm run lint`)
-- [ ] 3.3 Build succeeds (`npm run build`)
-- [ ] 3.4 Existing suites still pass (`npm run test:remote`)
+- [x] 3.1 Type checking passes (`npx tsc --noEmit`)
+- [x] 3.2 Linting passes (`npm run lint`)
+- [x] 3.3 Build succeeds (`npm run build`)
+- [x] 3.4 Existing suites still pass (`npm run test:remote`)
 
 #### Manual
 
-- [ ] 3.5 Added submission appears top of list with manual badge and date
-- [ ] 3.6 Form clears after a successful add; a second add works without reload
-- [ ] 3.7 Empty/whitespace content shows an inline error and saves nothing
-- [ ] 3.8 A rejected submission keeps the owner's typed content in the textarea
-- [ ] 3.9 2000 chars saves; the textarea refuses more
-- [ ] 3.10 A new account sees the empty state
-- [ ] 3.11 Dashboard count matches the list and updates after an add
-- [ ] 3.12 Logged-out visit to `/dashboard/submissions` redirects to `/login`
+- [x] 3.5 Added submission appears top of list with manual badge and date
+- [x] 3.6 Form clears after a successful add; a second add works without reload
+- [x] 3.7 Empty/whitespace content shows an inline error and saves nothing
+- [x] 3.8 A rejected submission keeps the owner's typed content in the textarea
+- [x] 3.9 2000 chars saves; the textarea refuses more
+- [x] 3.10 A new account sees the empty state
+- [x] 3.11 Dashboard count matches the list and updates after an add
+- [x] 3.12 Logged-out visit to `/dashboard/submissions` redirects to `/login`
 
 ### Phase 4: Delete Path
 

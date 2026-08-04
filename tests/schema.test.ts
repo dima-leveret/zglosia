@@ -269,6 +269,53 @@ describe('submission_intake migration', () => {
     expect(error!.code).toBe('42501')
   })
 
+  it('refuses content past the 2000-character cap (proves the CHECK, not just Zod)', async () => {
+    // Review finding F2: the cap is an S-03 prompt-token budget, and Zod is not
+    // a boundary — this insert is exactly the direct PostgREST call that skips
+    // it. 23514 is check_violation.
+    const { error } = await ownerDb
+      .from('submissions')
+      .insert({
+        company_id: companyId,
+        content: 'a'.repeat(2001),
+        source: 'manual',
+      })
+      .select('id')
+
+    expect(error).not.toBeNull()
+    expect(error!.code).toBe('23514')
+  })
+
+  it('accepts content at exactly the 2000-character cap', async () => {
+    // Boundary companion: without it, a constraint that rejected everything
+    // would make the test above pass for the wrong reason.
+    const { data, error } = await ownerDb
+      .from('submissions')
+      .insert({
+        company_id: companyId,
+        content: 'a'.repeat(2000),
+        source: 'manual',
+      })
+      .select('id')
+
+    expect(error).toBeNull()
+    expect(data).toHaveLength(1)
+  })
+
+  it('refuses whitespace-only content (proves the btrim half of the CHECK)', async () => {
+    const { error } = await ownerDb
+      .from('submissions')
+      .insert({
+        company_id: companyId,
+        content: '   \n\t  ',
+        source: 'manual',
+      })
+      .select('id')
+
+    expect(error).not.toBeNull()
+    expect(error!.code).toBe('23514')
+  })
+
   it('grants the anon role nothing at all (S-06 opens that surface, not this slice)', async () => {
     // A bare anon-key client with no session — exactly what a public form
     // request looks like today. Both verbs must be refused by the grant, not

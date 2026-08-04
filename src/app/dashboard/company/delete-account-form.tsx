@@ -28,9 +28,13 @@ export function DeleteAccountForm({ companyName }: { companyName: string | null 
         <h2 className="text-lg font-semibold text-red-900 dark:text-red-200">
           Delete account
         </h2>
+        {/* Submissions are named explicitly because S-02's `on delete cascade`
+            made them part of what this erases. An erasure gate that understates
+            what it erases is not informed consent. */}
         <p className="text-sm text-red-800 dark:text-red-300">
-          This permanently deletes your account and your company data. It cannot
-          be undone, and there is no way to export your data first.
+          This permanently deletes your account, your company profile, and every
+          submission you have collected. It cannot be undone, and there is no way
+          to export your data first.
         </p>
       </div>
 

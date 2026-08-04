@@ -11,16 +11,12 @@ import {
   type SubmissionField,
 } from '@/lib/validation'
 
-const FAILURE_MESSAGE = 'Could not save the submission. Please try again.'
-
-/**
- * Deliberately generic, and deliberately the same string whether the row does
- * not exist or belongs to another company. Telling the owner "that submission
- * isn't yours" would confirm that the id exists — a membership oracle over
- * other tenants' primary keys.
- */
-const DELETE_FAILURE_MESSAGE =
-  'Could not delete that submission. Please try again.'
+import {
+  SUBMISSION_ADDED,
+  SUBMISSION_DELETED,
+  SUBMISSION_DELETE_FAILED,
+  SUBMISSION_SAVE_FAILED,
+} from './messages'
 
 /**
  * Records one manually entered submission (FR-008).
@@ -62,7 +58,7 @@ export async function createSubmission(
   // the rest of the app handles gracefully.
   if (!company) {
     console.error('createSubmission: no company provisioned for this owner')
-    return { message: FAILURE_MESSAGE, values: { content: echo } }
+    return { message: SUBMISSION_SAVE_FAILED, values: { content: echo } }
   }
 
   const supabase = await createClient()
@@ -83,19 +79,19 @@ export async function createSubmission(
 
   if (error) {
     console.error('submission insert failed:', error.code, error.message)
-    return { message: FAILURE_MESSAGE, values: { content: echo } }
+    return { message: SUBMISSION_SAVE_FAILED, values: { content: echo } }
   }
 
   if (!data?.length) {
     console.error('submission insert matched no row for company', company.id)
-    return { message: FAILURE_MESSAGE, values: { content: echo } }
+    return { message: SUBMISSION_SAVE_FAILED, values: { content: echo } }
   }
 
   revalidatePath('/dashboard/submissions')
   revalidatePath('/dashboard')
 
   // No `values` on purpose: their absence is what lets the form clear.
-  return { message: 'Submission added.' }
+  return { message: SUBMISSION_ADDED }
 }
 
 /**
@@ -111,10 +107,14 @@ const DeleteSubmissionSchema = z.object({
  * Permanently removes one submission belonging to the caller's company
  * (FR-009). Hard delete: no soft-delete column, no undo, no trash.
  */
+// FormState<never>, not FormState<'submission'>: this action returns only a
+// `message` and has no per-field error channel at all. Naming a field the
+// action can never populate is the exact drift the generic parameter exists to
+// prevent (see the FormState doc comment in validation.ts).
 export async function deleteSubmission(
-  _prevState: FormState<'submission'>,
+  _prevState: FormState<never>,
   formData: FormData
-): Promise<FormState<'submission'>> {
+): Promise<FormState<never>> {
   await verifySession()
 
   const validatedFields = DeleteSubmissionSchema.safeParse({
@@ -123,7 +123,7 @@ export async function deleteSubmission(
 
   if (!validatedFields.success) {
     console.error('deleteSubmission: malformed submission id')
-    return { message: DELETE_FAILURE_MESSAGE }
+    return { message: SUBMISSION_DELETE_FAILED }
   }
 
   // SECURITY — same invariant as createSubmission: the company scope comes from
@@ -133,7 +133,7 @@ export async function deleteSubmission(
 
   if (!company) {
     console.error('deleteSubmission: no company provisioned for this owner')
-    return { message: DELETE_FAILURE_MESSAGE }
+    return { message: SUBMISSION_DELETE_FAILED }
   }
 
   const supabase = await createClient()
@@ -153,7 +153,7 @@ export async function deleteSubmission(
 
   if (error) {
     console.error('submission delete failed:', error.code, error.message)
-    return { message: DELETE_FAILURE_MESSAGE }
+    return { message: SUBMISSION_DELETE_FAILED }
   }
 
   if (!data?.length) {
@@ -161,11 +161,20 @@ export async function deleteSubmission(
       'submission delete matched no row for company',
       company.id
     )
-    return { message: DELETE_FAILURE_MESSAGE }
+    // Revalidate before returning, unlike the error branch above. Zero rows
+    // usually means the submission is already gone — deleted in another tab, or
+    // on a page left open since. Returning without revalidating leaves the
+    // stale row rendered under a failure message, and every retry reproduces
+    // the same failure forever. Re-rendering the list is what makes that
+    // recoverable.
+    revalidatePath('/dashboard/submissions')
+    revalidatePath('/dashboard')
+
+    return { message: SUBMISSION_DELETE_FAILED }
   }
 
   revalidatePath('/dashboard/submissions')
   revalidatePath('/dashboard')
 
-  return { message: 'Submission deleted.' }
+  return { message: SUBMISSION_DELETED }
 }

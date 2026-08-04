@@ -97,8 +97,13 @@ export const getSubmissions = cache(async () => {
     throw error
   }
 
+  // Deliberately uncast. supabase-js already infers the exact row shape from
+  // the Database generic, so an `as SubmissionListRow[]` here would buy nothing
+  // and would silence the very check the type exists for: with a cast, dropping
+  // a column from the select above still compiles, and `source` arrives
+  // undefined so every row renders the wrong provenance badge.
   return {
-    submissions: (data ?? []) as SubmissionListRow[],
+    submissions: data ?? [],
     total: count ?? 0,
   }
 })

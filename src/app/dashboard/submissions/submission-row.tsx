@@ -3,6 +3,7 @@
 import { useActionState, useEffect, useRef, useState } from 'react'
 
 import { deleteSubmission } from './actions'
+import { SUBMISSION_DELETED } from './messages'
 
 /**
  * One list row, plus the only piece of client state this slice needs: whether
@@ -21,9 +22,16 @@ import { deleteSubmission } from './actions'
 export function SubmissionRow({
   id,
   children,
+  onDeleted,
 }: {
   id: string
   children: React.ReactNode
+  /**
+   * Called after a delete succeeds, so the list can move focus and announce the
+   * removal. Both have to happen above this component: the row unmounts on
+   * revalidation, taking any focus target or live region inside it along.
+   */
+  onDeleted: () => void
 }) {
   const [armed, setArmed] = useState(false)
   const [state, action, pending] = useActionState(deleteSubmission, undefined)
@@ -48,25 +56,44 @@ export function SubmissionRow({
     wasArmed.current = armed
   }, [armed])
 
+  // Hand off to the list on success. This effect may well run in the same pass
+  // that unmounts the row — which is exactly why the focus target and the
+  // announcement it triggers live in the parent rather than here.
+  useEffect(() => {
+    if (state?.message === SUBMISSION_DELETED) {
+      onDeleted()
+    }
+  }, [state, onDeleted])
+
   return (
     <li className="flex flex-col gap-2 rounded-xl border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-950">
       {children}
 
+      {/* Rendered unconditionally, empty when disarmed. A live region has to
+          already exist in the DOM before its content changes — one inserted
+          together with its text is skipped by several screen-reader/browser
+          pairs, which would make the announcement this element exists for
+          silently unreliable. */}
+      <p
+        id={`delete-prompt-${id}`}
+        role="status"
+        className="text-xs text-red-700 empty:hidden dark:text-red-400"
+      >
+        {armed ? 'Delete permanently? This cannot be undone.' : ''}
+      </p>
+
       <div className="flex items-center gap-2">
         {armed ? (
-          <form action={action} className="flex items-center gap-2">
+          // aria-describedby sits on the form so BOTH buttons inherit it.
+          // Putting it only on Confirm left the described control unreachable:
+          // focus moves to Cancel on arming, so the user landed on a button
+          // with no description at all.
+          <form
+            action={action}
+            aria-describedby={`delete-prompt-${id}`}
+            className="flex items-center gap-2"
+          >
             <input type="hidden" name="id" value={id} />
-
-            {/* Announced because it appears dynamically: a screen-reader user
-                must be told the control they are on has become destructive,
-                not discover it by pressing it. */}
-            <p
-              id={`delete-prompt-${id}`}
-              role="status"
-              className="text-xs text-red-700 dark:text-red-400"
-            >
-              Delete permanently? This cannot be undone.
-            </p>
 
             <button
               type="submit"
@@ -82,6 +109,7 @@ export function SubmissionRow({
               type="button"
               onClick={() => setArmed(false)}
               disabled={pending}
+              aria-describedby={`delete-prompt-${id}`}
               className="rounded-full border border-zinc-300 px-3 py-1 text-xs font-medium transition-colors hover:bg-black/[.04] disabled:opacity-50 dark:border-zinc-700 dark:hover:bg-white/[.06]"
             >
               Cancel

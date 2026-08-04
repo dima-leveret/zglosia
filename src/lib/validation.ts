@@ -51,6 +51,11 @@ const DESCRIPTION_MAX = 2000
  * Exported because the textarea sets `maxLength` from it — the browser-side cap
  * and the server-side cap must be the same number, and a literal in the JSX is
  * how they drift.
+ *
+ * Mirrored by the `submissions_content_bounds` CHECK constraint
+ * (supabase/migrations/20260804183507_submission_content_bounds.sql). Zod is
+ * not a boundary — a direct PostgREST call skips it entirely — so the database
+ * enforces the same bound independently. Change both together.
  */
 export const SUBMISSION_CONTENT_MAX = 2000
 

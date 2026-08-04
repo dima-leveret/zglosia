@@ -487,6 +487,43 @@ describe('submission isolation', () => {
     expect(rows![0].content).toBe(OWNER_A_CONTENT)
   })
 
+  it("denies owner B an unfiltered DELETE from reaching owner A's submissions", async () => {
+    // The most dangerous statement shape on this table, and the reason it needs
+    // its own case: DELETE is GRANTED to authenticated here, unlike on
+    // companies where it is revoked and any attempt dies at 42501. So a delete
+    // carrying no id filter is scoped by RLS and nothing else. If the policy
+    // were wrong, this one statement would empty every tenant's submissions
+    // rather than merely leak them — and it would do so silently.
+    const { data, error } = await ownerB.db
+      .from('submissions')
+      .delete()
+      .neq('id', '00000000-0000-0000-0000-000000000000')
+      .select('id')
+
+    expect(error).toBeNull()
+    // Only B's own rows came back; A's id is not among them.
+    expect(data!.map((row) => row.id)).not.toContain(ownerASubmissionId)
+
+    // The decisive assertion: A's row is untouched in the database.
+    const { data: aRows, error: aError } = await admin
+      .from('submissions')
+      .select('id, content')
+      .eq('id', ownerASubmissionId)
+    expect(aError).toBeNull()
+    expect(aRows).toHaveLength(1)
+    expect(aRows![0].content).toBe(OWNER_A_CONTENT)
+
+    // ...while owner B's own row DID go, proving the statement actually
+    // executed and the isolation above is not a false negative from a delete
+    // that matched nothing at all.
+    const { data: bRows, error: bError } = await admin
+      .from('submissions')
+      .select('id')
+      .eq('id', ownerBSubmissionId)
+    expect(bError).toBeNull()
+    expect(bRows).toHaveLength(0)
+  })
+
   it('lets owner A insert, list, and delete their OWN submission', async () => {
     // Positive control. Without it every denial above would also pass on a
     // table nobody can write to, and the suite would report perfect isolation

@@ -509,7 +509,7 @@ The one non-additive consequence is the `on delete cascade` from `submissions.co
 
 #### Manual
 
-- [x] 2.5 `getSubmissions()` returns only the caller's rows with two owners seeded — closed by 5.4
+- [x] 2.5 `getSubmissions()` returns only the caller's rows with two owners seeded — closed by 5.4 — 8e4ef65
 
 ### Phase 3: Add + List Surface
 
@@ -551,11 +551,11 @@ The one non-additive consequence is the `on delete cascade` from `submissions.co
 
 #### Automated
 
-- [x] 5.1 All suites pass (`npm run test:remote`)
-- [x] 5.2 Denial tests spot-checked as capable of failing
-- [x] 5.3 Linting passes (`npm run lint`)
+- [x] 5.1 All suites pass (`npm run test:remote`) — 8e4ef65
+- [x] 5.2 Denial tests spot-checked as capable of failing — 8e4ef65
+- [x] 5.3 Linting passes (`npm run lint`) — 8e4ef65
 
 #### Manual
 
-- [x] 5.4 Two owner sessions show disjoint submission lists
-- [x] 5.5 Owner B's direct PostgREST call against owner A's submission returns nothing
+- [x] 5.4 Two owner sessions show disjoint submission lists — 8e4ef65
+- [x] 5.5 Owner B's direct PostgREST call against owner A's submission returns nothing — 8e4ef65

@@ -359,3 +359,228 @@ describe('per-company write isolation', () => {
     expect(rows).toHaveLength(1)
   })
 })
+
+/**
+ * S-02 carries the contract onto public.submissions — the FIRST table in the
+ * product to key its RLS on public.current_company_id() rather than directly on
+ * auth.uid(). The helper existed since F-01 but had no consumer, so until this
+ * block ran, the predicate every downstream tenant table (S-03, S-04, S-06) is
+ * built on had never been exercised against a real second tenant.
+ *
+ * Two ways this differs from the companies suite above, both load-bearing:
+ *
+ *   * DELETE is GRANTED here, unlike on companies where it is revoked outright.
+ *     So a cross-tenant delete does not fail loudly with 42501 — it succeeds,
+ *     matches zero rows, and reports nothing. The re-read through the
+ *     service-role client is the only assertion that can tell that apart from a
+ *     delete that actually destroyed the row.
+ *   * The `source` column is pinned by the insert policy's `with check`, which
+ *     nothing in the existing suites has an equivalent for.
+ */
+describe('submission isolation', () => {
+  const OWNER_A_CONTENT = "Owner A's submission. Owner B must never see this."
+  const OWNER_B_CONTENT = "Owner B's own submission."
+
+  let ownerASubmissionId: string
+  let ownerBSubmissionId: string
+
+  beforeAll(async () => {
+    // Seeded past RLS so the fixtures do not depend on the policies under test.
+    const { data, error } = await admin
+      .from('submissions')
+      .insert([
+        {
+          company_id: ownerA.companyId,
+          content: OWNER_A_CONTENT,
+          source: 'manual',
+        },
+        {
+          company_id: ownerB.companyId,
+          content: OWNER_B_CONTENT,
+          source: 'manual',
+        },
+      ])
+      .select('id, company_id')
+    if (error) throw error
+
+    ownerASubmissionId = data!.find((r) => r.company_id === ownerA.companyId)!.id
+    ownerBSubmissionId = data!.find((r) => r.company_id === ownerB.companyId)!.id
+  })
+
+  it('scopes an unfiltered select to the calling owner only', async () => {
+    const { data, error } = await ownerB.db
+      .from('submissions')
+      .select('id, company_id, content')
+
+    expect(error).toBeNull()
+    expect(data!.map((row) => row.id)).toContain(ownerBSubmissionId)
+    // The decisive part: A's row exists but is absent from B's result set.
+    expect(data!.map((row) => row.id)).not.toContain(ownerASubmissionId)
+    expect(data!.every((row) => row.company_id === ownerB.companyId)).toBe(true)
+  })
+
+  it("denies owner B a targeted read of owner A's submission", async () => {
+    const { data, error } = await ownerB.db
+      .from('submissions')
+      .select('id, content')
+      .eq('id', ownerASubmissionId)
+
+    expect(error).toBeNull()
+    expect(data).toEqual([])
+  })
+
+  it('confirms both submissions really exist, so the denial is RLS and not absence', async () => {
+    const { data, error } = await admin
+      .from('submissions')
+      .select('id')
+      .in('id', [ownerASubmissionId, ownerBSubmissionId])
+
+    expect(error).toBeNull()
+    expect(data).toHaveLength(2)
+  })
+
+  it("denies owner B an INSERT naming owner A's company_id", async () => {
+    const forged = 'FORGED INTO OWNER A BY OWNER B'
+
+    const { error } = await ownerB.db
+      .from('submissions')
+      .insert({
+        company_id: ownerA.companyId,
+        content: forged,
+        source: 'manual',
+      })
+      .select('id')
+
+    // The insert policy's `with check` refuses the row outright — loudly, not
+    // silently, because a rejected INSERT has no "zero rows matched" state.
+    expect(error?.code).toBe('42501')
+
+    const { data: rows, error: readError } = await admin
+      .from('submissions')
+      .select('id')
+      .eq('company_id', ownerA.companyId)
+      .eq('content', forged)
+    expect(readError).toBeNull()
+    expect(rows).toHaveLength(0)
+  })
+
+  it("denies owner B a DELETE of owner A's submission, leaving it present", async () => {
+    const { data, error } = await ownerB.db
+      .from('submissions')
+      .delete()
+      .eq('id', ownerASubmissionId)
+      .select('id')
+
+    // Silent denial: DELETE is granted, so this SUCCEEDS and simply matches
+    // nothing. An assertion on `error` alone would pass with the policies
+    // dropped — which is exactly the failure mode this test exists to catch.
+    expect(error).toBeNull()
+    expect(data).toEqual([])
+
+    // THIS is the assertion that means something.
+    const { data: rows, error: readError } = await admin
+      .from('submissions')
+      .select('id, content')
+      .eq('id', ownerASubmissionId)
+    expect(readError).toBeNull()
+    expect(rows).toHaveLength(1)
+    expect(rows![0].content).toBe(OWNER_A_CONTENT)
+  })
+
+  it('lets owner A insert, list, and delete their OWN submission', async () => {
+    // Positive control. Without it every denial above would also pass on a
+    // table nobody can write to, and the suite would report perfect isolation
+    // on a broken feature.
+    const content = `Owner A round-trip at ${new Date().toISOString()}`
+
+    const { data: inserted, error: insertError } = await ownerA.db
+      .from('submissions')
+      .insert({
+        company_id: ownerA.companyId,
+        content,
+        source: 'manual',
+      })
+      .select('id')
+
+    expect(insertError).toBeNull()
+    expect(inserted).toHaveLength(1)
+    const id = inserted![0].id
+
+    const { data: listed, error: listError } = await ownerA.db
+      .from('submissions')
+      .select('id, content')
+
+    expect(listError).toBeNull()
+    expect(listed!.map((row) => row.id)).toContain(id)
+
+    const { data: deleted, error: deleteError } = await ownerA.db
+      .from('submissions')
+      .delete()
+      .eq('id', id)
+      .select('id')
+
+    expect(deleteError).toBeNull()
+    expect(deleted).toHaveLength(1)
+
+    const { data: rows, error: readError } = await admin
+      .from('submissions')
+      .select('id')
+      .eq('id', id)
+    expect(readError).toBeNull()
+    expect(rows).toHaveLength(0)
+  })
+})
+
+/**
+ * FR-008's origin marking is only meaningful if it cannot be forged. An owner
+ * who can mint rows claiming to be customer form submissions can manufacture
+ * the appearance of customer demand and then generate an action plan from it —
+ * so this is an integrity guarantee, not a labelling convenience.
+ *
+ * The pin lives in the insert policy's `with check`, which is why an anon-key
+ * session cannot get around it by calling PostgREST directly instead of using
+ * the form. Nothing in the existing suites covers this shape.
+ */
+describe('submission source integrity', () => {
+  it("denies owner A an INSERT claiming source 'form' on their own company", async () => {
+    const content = 'Owner A pretending to be a customer.'
+
+    const { error } = await ownerA.db
+      .from('submissions')
+      .insert({
+        company_id: ownerA.companyId,
+        content,
+        source: 'form',
+      })
+      .select('id')
+
+    expect(error?.code).toBe('42501')
+
+    const { data: rows, error: readError } = await admin
+      .from('submissions')
+      .select('id')
+      .eq('company_id', ownerA.companyId)
+      .eq('content', content)
+    expect(readError).toBeNull()
+    expect(rows).toHaveLength(0)
+  })
+
+  it("accepts the same INSERT with source 'manual'", async () => {
+    // The companion assertion. Without it, a broken grant or a policy that
+    // refuses everything would make the denial above pass for the wrong reason.
+    const content = 'Owner A recording it honestly.'
+
+    const { data, error } = await ownerA.db
+      .from('submissions')
+      .insert({
+        company_id: ownerA.companyId,
+        content,
+        source: 'manual',
+      })
+      .select('id, source')
+
+    expect(error).toBeNull()
+    expect(data).toHaveLength(1)
+    expect(data![0].source).toBe('manual')
+  })
+})

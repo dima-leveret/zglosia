@@ -509,7 +509,7 @@ The one non-additive consequence is the `on delete cascade` from `submissions.co
 
 #### Manual
 
-- [ ] 2.5 `getSubmissions()` returns only the caller's rows with two owners seeded
+- [x] 2.5 `getSubmissions()` returns only the caller's rows with two owners seeded — closed by 5.4
 
 ### Phase 3: Add + List Surface
 
@@ -535,27 +535,27 @@ The one non-additive consequence is the `on delete cascade` from `submissions.co
 
 #### Automated
 
-- [x] 4.1 Type checking passes (`npx tsc --noEmit`)
-- [x] 4.2 Linting passes (`npm run lint`)
-- [x] 4.3 Build succeeds (`npm run build`)
+- [x] 4.1 Type checking passes (`npx tsc --noEmit`) — 48a0490
+- [x] 4.2 Linting passes (`npm run lint`) — 48a0490
+- [x] 4.3 Build succeeds (`npm run build`) — 48a0490
 
 #### Manual
 
-- [x] 4.4 Delete arms only the clicked row
-- [x] 4.5 Cancel disarms and deletes nothing
-- [x] 4.6 Confirm removes the row and decrements the dashboard count
-- [x] 4.7 The deletion survives a hard reload
-- [x] 4.8 Arm, confirm, and cancel all reachable by keyboard
+- [x] 4.4 Delete arms only the clicked row — 48a0490
+- [x] 4.5 Cancel disarms and deletes nothing — 48a0490
+- [x] 4.6 Confirm removes the row and decrements the dashboard count — 48a0490
+- [x] 4.7 The deletion survives a hard reload — 48a0490
+- [x] 4.8 Arm, confirm, and cancel all reachable by keyboard — 48a0490
 
 ### Phase 5: Isolation & Forgery Verification
 
 #### Automated
 
-- [ ] 5.1 All suites pass (`npm run test:remote`)
-- [ ] 5.2 Denial tests spot-checked as capable of failing
-- [ ] 5.3 Linting passes (`npm run lint`)
+- [x] 5.1 All suites pass (`npm run test:remote`)
+- [x] 5.2 Denial tests spot-checked as capable of failing
+- [x] 5.3 Linting passes (`npm run lint`)
 
 #### Manual
 
-- [ ] 5.4 Two owner sessions show disjoint submission lists
-- [ ] 5.5 Owner B's direct PostgREST call against owner A's submission returns nothing
+- [x] 5.4 Two owner sessions show disjoint submission lists
+- [x] 5.5 Owner B's direct PostgREST call against owner A's submission returns nothing

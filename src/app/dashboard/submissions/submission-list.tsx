@@ -1,5 +1,7 @@
 import type { SubmissionListRow } from '@/lib/dal'
 
+import { SubmissionRow } from './submission-row'
+
 /**
  * Fixed locale rather than the ambient one: this renders on the server, and an
  * implicit locale would make the output depend on where it happens to run.
@@ -34,7 +36,10 @@ function SourceBadge({ source }: { source: SubmissionListRow['source'] }) {
 }
 
 /**
- * Presentational list of submissions, newest first.
+ * List of submissions, newest first. Stays a server component: only the delete
+ * control needs client state, so only that row wrapper is a client component.
+ * The badge, the date and the content are rendered here and handed down as
+ * children, which keeps date formatting on the server.
  *
  * Long content wraps rather than truncating — capped at 2000 characters, the
  * full text is short enough to read in place, and a truncated complaint is one
@@ -48,10 +53,7 @@ export function SubmissionList({
   return (
     <ul className="flex flex-col gap-3">
       {submissions.map((submission) => (
-        <li
-          key={submission.id}
-          className="flex flex-col gap-2 rounded-xl border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-950"
-        >
+        <SubmissionRow key={submission.id} id={submission.id}>
           <div className="flex items-center gap-2">
             <SourceBadge source={submission.source} />
             <time
@@ -64,7 +66,7 @@ export function SubmissionList({
           <p className="text-sm whitespace-pre-wrap break-words text-black dark:text-zinc-50">
             {submission.content}
           </p>
-        </li>
+        </SubmissionRow>
       ))}
     </ul>
   )

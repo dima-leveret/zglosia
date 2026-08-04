@@ -515,37 +515,37 @@ The one non-additive consequence is the `on delete cascade` from `submissions.co
 
 #### Automated
 
-- [x] 3.1 Type checking passes (`npx tsc --noEmit`)
-- [x] 3.2 Linting passes (`npm run lint`)
-- [x] 3.3 Build succeeds (`npm run build`)
-- [x] 3.4 Existing suites still pass (`npm run test:remote`)
+- [x] 3.1 Type checking passes (`npx tsc --noEmit`) — b842dd9
+- [x] 3.2 Linting passes (`npm run lint`) — b842dd9
+- [x] 3.3 Build succeeds (`npm run build`) — b842dd9
+- [x] 3.4 Existing suites still pass (`npm run test:remote`) — b842dd9
 
 #### Manual
 
-- [x] 3.5 Added submission appears top of list with manual badge and date
-- [x] 3.6 Form clears after a successful add; a second add works without reload
-- [x] 3.7 Empty/whitespace content shows an inline error and saves nothing
-- [x] 3.8 A rejected submission keeps the owner's typed content in the textarea
-- [x] 3.9 2000 chars saves; the textarea refuses more
-- [x] 3.10 A new account sees the empty state
-- [x] 3.11 Dashboard count matches the list and updates after an add
-- [x] 3.12 Logged-out visit to `/dashboard/submissions` redirects to `/login`
+- [x] 3.5 Added submission appears top of list with manual badge and date — b842dd9
+- [x] 3.6 Form clears after a successful add; a second add works without reload — b842dd9
+- [x] 3.7 Empty/whitespace content shows an inline error and saves nothing — b842dd9
+- [x] 3.8 A rejected submission keeps the owner's typed content in the textarea — b842dd9
+- [x] 3.9 2000 chars saves; the textarea refuses more — b842dd9
+- [x] 3.10 A new account sees the empty state — b842dd9
+- [x] 3.11 Dashboard count matches the list and updates after an add — b842dd9
+- [x] 3.12 Logged-out visit to `/dashboard/submissions` redirects to `/login` — b842dd9
 
 ### Phase 4: Delete Path
 
 #### Automated
 
-- [ ] 4.1 Type checking passes (`npx tsc --noEmit`)
-- [ ] 4.2 Linting passes (`npm run lint`)
-- [ ] 4.3 Build succeeds (`npm run build`)
+- [x] 4.1 Type checking passes (`npx tsc --noEmit`)
+- [x] 4.2 Linting passes (`npm run lint`)
+- [x] 4.3 Build succeeds (`npm run build`)
 
 #### Manual
 
-- [ ] 4.4 Delete arms only the clicked row
-- [ ] 4.5 Cancel disarms and deletes nothing
-- [ ] 4.6 Confirm removes the row and decrements the dashboard count
-- [ ] 4.7 The deletion survives a hard reload
-- [ ] 4.8 Arm, confirm, and cancel all reachable by keyboard
+- [x] 4.4 Delete arms only the clicked row
+- [x] 4.5 Cancel disarms and deletes nothing
+- [x] 4.6 Confirm removes the row and decrements the dashboard count
+- [x] 4.7 The deletion survives a hard reload
+- [x] 4.8 Arm, confirm, and cancel all reachable by keyboard
 
 ### Phase 5: Isolation & Forgery Verification
 

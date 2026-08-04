@@ -170,3 +170,169 @@ describe('company_profile migration', () => {
     })
   })
 })
+
+/**
+ * Phase 1 gate for S-02.
+ *
+ * The four negative assertions here are the automated compensating control for
+ * the revoke-then-grant block in 20260804171802_submission_intake.sql. The
+ * linked project auto-exposes new tables, so without the revoke `create table`
+ * would have already granted ALL to anon and authenticated and the migration's
+ * narrow grants would add nothing — while still reading correctly in the repo.
+ * Every one of these would then pass for the wrong reason, or fail loudly.
+ * Verifying the privilege surface by eye in Studio is how that same class of
+ * gap survived twice already.
+ */
+describe('submission_intake migration', () => {
+  it('lets an authenticated owner INSERT a manual submission and read it back', async () => {
+    // The positive control. Without it, every denial below would also pass on
+    // a table nobody can write to at all.
+    const { data: inserted, error: insertError } = await ownerDb
+      .from('submissions')
+      .insert({ company_id: companyId, content: 'Coffee was cold.', source: 'manual' })
+      .select('id, content, source')
+
+    expect(insertError).toBeNull()
+    expect(inserted).toHaveLength(1)
+    expect(inserted![0]).toMatchObject({ content: 'Coffee was cold.', source: 'manual' })
+
+    const { data: read, error: readError } = await ownerDb
+      .from('submissions')
+      .select('id, company_id, content, source, created_at')
+      .eq('id', inserted![0].id)
+      .single()
+
+    expect(readError).toBeNull()
+    expect(read).toMatchObject({
+      company_id: companyId,
+      content: 'Coffee was cold.',
+      source: 'manual',
+    })
+    expect(read!.created_at).toBeTruthy()
+  })
+
+  it('rejects a source outside the enum', async () => {
+    const { error } = await ownerDb
+      .from('submissions')
+      .insert({ company_id: companyId, content: 'Bogus source.', source: 'imported' })
+      .select('id')
+
+    // The enum is what makes `source` a typed union downstream rather than a
+    // bare string; a check constraint would not survive type generation.
+    expect(error).not.toBeNull()
+    expect(error!.code).toBe('22P02')
+  })
+
+  it('refuses an INSERT that supplies its own id (proves the column-scoped grant)', async () => {
+    // grant insert (company_id, content, source) — naming `id` touches a column
+    // outside the grant, so Postgres refuses before RLS is consulted. A
+    // table-wide insert grant would let an owner pick their own primary key.
+    const { error } = await ownerDb
+      .from('submissions')
+      .insert({
+        id: randomUUID(),
+        company_id: companyId,
+        content: 'Self-chosen id.',
+        source: 'manual',
+      })
+      .select('id')
+
+    expect(error).not.toBeNull()
+    expect(error!.code).toBe('42501')
+  })
+
+  it('refuses an INSERT that supplies its own created_at (same grant)', async () => {
+    const { error } = await ownerDb
+      .from('submissions')
+      .insert({
+        company_id: companyId,
+        content: 'Backdated.',
+        source: 'manual',
+        created_at: '2000-01-01T00:00:00Z',
+      })
+      .select('id')
+
+    expect(error).not.toBeNull()
+    expect(error!.code).toBe('42501')
+  })
+
+  it('refuses any UPDATE (FR-010 is parked: no update grant, no update policy)', async () => {
+    // Editing a customer's own words is the thing the PRD says not to do, so
+    // the privilege does not exist at any layer. This test is what keeps a
+    // future "just add update" migration honest.
+    const { error } = await ownerDb
+      .from('submissions')
+      .update({ content: 'Rewritten by the owner.' })
+      .eq('company_id', companyId)
+
+    expect(error).not.toBeNull()
+    expect(error!.code).toBe('42501')
+  })
+
+  it('refuses content past the 2000-character cap (proves the CHECK, not just Zod)', async () => {
+    // Review finding F2: the cap is an S-03 prompt-token budget, and Zod is not
+    // a boundary — this insert is exactly the direct PostgREST call that skips
+    // it. 23514 is check_violation.
+    const { error } = await ownerDb
+      .from('submissions')
+      .insert({
+        company_id: companyId,
+        content: 'a'.repeat(2001),
+        source: 'manual',
+      })
+      .select('id')
+
+    expect(error).not.toBeNull()
+    expect(error!.code).toBe('23514')
+  })
+
+  it('accepts content at exactly the 2000-character cap', async () => {
+    // Boundary companion: without it, a constraint that rejected everything
+    // would make the test above pass for the wrong reason.
+    const { data, error } = await ownerDb
+      .from('submissions')
+      .insert({
+        company_id: companyId,
+        content: 'a'.repeat(2000),
+        source: 'manual',
+      })
+      .select('id')
+
+    expect(error).toBeNull()
+    expect(data).toHaveLength(1)
+  })
+
+  it('refuses whitespace-only content (proves the btrim half of the CHECK)', async () => {
+    const { error } = await ownerDb
+      .from('submissions')
+      .insert({
+        company_id: companyId,
+        content: '   \n\t  ',
+        source: 'manual',
+      })
+      .select('id')
+
+    expect(error).not.toBeNull()
+    expect(error!.code).toBe('23514')
+  })
+
+  it('grants the anon role nothing at all (S-06 opens that surface, not this slice)', async () => {
+    // A bare anon-key client with no session — exactly what a public form
+    // request looks like today. Both verbs must be refused by the grant, not
+    // merely filtered to zero rows by RLS.
+    const anonDb = createClient(url!, anonKey!, {
+      auth: { autoRefreshToken: false, persistSession: false },
+    })
+
+    const { error: selectError } = await anonDb.from('submissions').select('id')
+    expect(selectError).not.toBeNull()
+    expect(selectError!.code).toBe('42501')
+
+    const { error: insertError } = await anonDb
+      .from('submissions')
+      .insert({ company_id: companyId, content: 'From nobody.', source: 'form' })
+      .select('id')
+    expect(insertError).not.toBeNull()
+    expect(insertError!.code).toBe('42501')
+  })
+})

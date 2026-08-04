@@ -27,12 +27,37 @@ export type FormState<TFields extends string = string> =
   | {
       errors?: Partial<Record<TFields, string[]>>
       message?: string
+      /**
+       * The submitted values, echoed back so a rejected form can re-fill
+       * itself. Only forms that have no stored row to re-fill from need this:
+       * React resets an uncontrolled form once its action completes and does
+       * not distinguish a success from a validation failure, so without an
+       * echo a rejected submission is simply erased. Populate it on failure
+       * and leave it absent on success — the reset then clears the form, which
+       * is what success should look like.
+       */
+      values?: Partial<Record<TFields, string>>
     }
   | undefined
 
 /** Caps chosen as an S-03 prompt-token budget, not as a cosmetic limit. */
 const SHORT_FIELD_MAX = 120
 const DESCRIPTION_MAX = 2000
+
+/**
+ * Same budget, same reasoning: every submission is fed to the S-03 action-plan
+ * prompt, and the prompt's ceiling is the number of submissions times this.
+ *
+ * Exported because the textarea sets `maxLength` from it — the browser-side cap
+ * and the server-side cap must be the same number, and a literal in the JSX is
+ * how they drift.
+ *
+ * Mirrored by the `submissions_content_bounds` CHECK constraint
+ * (supabase/migrations/20260804183507_submission_content_bounds.sql). Zod is
+ * not a boundary — a direct PostgREST call skips it entirely — so the database
+ * enforces the same bound independently. Change both together.
+ */
+export const SUBMISSION_CONTENT_MAX = 2000
 
 /**
  * A required, trimmed text field. Trim is registered before the length checks,
@@ -73,6 +98,29 @@ export const COMPANY_PROFILE_FIELDS = [
 ] as const
 
 export type CompanyProfileField = (typeof COMPANY_PROFILE_FIELDS)[number]
+
+/**
+ * One manually added submission as the owner types it (FR-008).
+ *
+ * `source` is deliberately absent. It is not a field the owner can influence:
+ * the action sets it to 'manual' server-side and the RLS `with check` pins it
+ * there, so an owner's session cannot mint a row claiming to be a customer's
+ * form submission. Accepting it here — even to ignore it — would put the
+ * application in the business of deciding provenance, which is the database's
+ * job in this design.
+ */
+export const SubmissionSchema = z.object({
+  content: requiredText('Submission', SUBMISSION_CONTENT_MAX),
+})
+
+export type SubmissionInput = z.infer<typeof SubmissionSchema>
+
+/**
+ * The only field the add form can produce an error for. A union of one, so
+ * `FormState<SubmissionField>` cannot silently accept a key the form never
+ * renders.
+ */
+export type SubmissionField = 'content'
 
 /** The nullable row shape the DAL returns for these fields. */
 type CompanyProfileRow = Record<CompanyProfileField, string | null>

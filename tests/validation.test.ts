@@ -2,6 +2,8 @@ import { describe, expect, it } from 'vitest'
 
 import {
   CompanyProfileSchema,
+  SUBMISSION_CONTENT_MAX,
+  SubmissionSchema,
   isCompanyProfileComplete,
 } from '@/lib/validation'
 
@@ -127,6 +129,81 @@ describe('CompanyProfileSchema', () => {
     const result = CompanyProfileSchema.safeParse({
       ...valid,
       name: `  ${'a'.repeat(120)}  `,
+    })
+
+    expect(result.success).toBe(true)
+  })
+})
+
+describe('SubmissionSchema', () => {
+  it('accepts a filled submission', () => {
+    const result = SubmissionSchema.safeParse({
+      content: 'Kawa była zimna i czekałem 20 minut.',
+    })
+
+    expect(result.success).toBe(true)
+    expect(result.data).toEqual({
+      content: 'Kawa była zimna i czekałem 20 minut.',
+    })
+  })
+
+  it('rejects missing content', () => {
+    const result = SubmissionSchema.safeParse({})
+
+    expect(result.success).toBe(false)
+    expect(result.error!.flatten().fieldErrors.content).toBeDefined()
+  })
+
+  it('rejects empty content', () => {
+    const result = SubmissionSchema.safeParse({ content: '' })
+
+    expect(result.success).toBe(false)
+    expect(result.error!.flatten().fieldErrors.content).toBeDefined()
+  })
+
+  it('rejects whitespace-only content as required, not as too short', () => {
+    // The decisive case: trim must run BEFORE the min check, or "   " passes
+    // and the owner saves a blank row that later pollutes the S-03 prompt.
+    const result = SubmissionSchema.safeParse({ content: '   \n\t  ' })
+
+    expect(result.success).toBe(false)
+    expect(result.error!.flatten().fieldErrors.content![0]).toContain(
+      'is required'
+    )
+  })
+
+  it('trims before storing', () => {
+    const result = SubmissionSchema.safeParse({
+      content: '   Zbyt głośna muzyka.   ',
+    })
+
+    expect(result.success).toBe(true)
+    expect(result.data!.content).toBe('Zbyt głośna muzyka.')
+  })
+
+  it(`accepts content at exactly ${SUBMISSION_CONTENT_MAX} characters`, () => {
+    const result = SubmissionSchema.safeParse({
+      content: 'a'.repeat(SUBMISSION_CONTENT_MAX),
+    })
+
+    expect(result.success).toBe(true)
+  })
+
+  it(`rejects content past ${SUBMISSION_CONTENT_MAX} characters`, () => {
+    const result = SubmissionSchema.safeParse({
+      content: 'a'.repeat(SUBMISSION_CONTENT_MAX + 1),
+    })
+
+    expect(result.success).toBe(false)
+    expect(result.error!.flatten().fieldErrors.content![0]).toContain(
+      String(SUBMISSION_CONTENT_MAX)
+    )
+  })
+
+  it('measures the cap after trimming, not before', () => {
+    // Padding must not cost the owner characters they are entitled to.
+    const result = SubmissionSchema.safeParse({
+      content: `  ${'a'.repeat(SUBMISSION_CONTENT_MAX)}  `,
     })
 
     expect(result.success).toBe(true)

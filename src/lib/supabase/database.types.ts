@@ -72,6 +72,38 @@ export type Database = {
         }
         Relationships: []
       }
+      submissions: {
+        Row: {
+          company_id: string
+          content: string
+          created_at: string
+          id: string
+          source: Database["public"]["Enums"]["submission_source"]
+        }
+        Insert: {
+          company_id: string
+          content: string
+          created_at?: string
+          id?: string
+          source: Database["public"]["Enums"]["submission_source"]
+        }
+        Update: {
+          company_id?: string
+          content?: string
+          created_at?: string
+          id?: string
+          source?: Database["public"]["Enums"]["submission_source"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "submissions_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
@@ -80,7 +112,7 @@ export type Database = {
       current_company_id: { Args: never; Returns: string }
     }
     Enums: {
-      [_ in never]: never
+      submission_source: "manual" | "form"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -210,6 +242,8 @@ export const Constants = {
     Enums: {},
   },
   public: {
-    Enums: {},
+    Enums: {
+      submission_source: ["manual", "form"],
+    },
   },
 } as const

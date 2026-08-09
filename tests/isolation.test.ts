@@ -297,6 +297,61 @@ describe('per-company write isolation', () => {
     )
   })
 
+  it('denies owner A a rewrite of their OWN companies.id', async () => {
+    // S-05 publishes companies.id as the public form URL (FR-004), and the NFR
+    // requires that identifier to be unpredictable. Everything resting on that
+    // — the QR code, the non-enumerability of other tenants' links — assumes the
+    // owner cannot choose the value. Until this test existed the guarantee lived
+    // only in a grant and a migration comment.
+    //
+    // The grant is what refuses it: 20260730190000_narrow_company_write_grants
+    // re-granted `update (name, industry, description, location)` only, so `id`
+    // is outside the privilege and Postgres rejects with 42501 before any policy
+    // is consulted. RLS could not express this — a row policy decides WHICH
+    // rows, never WHICH columns.
+    const before = await readOwnerARow()
+
+    const { error } = await ownerA.db
+      .from('companies')
+      .update({ id: '00000000-0000-0000-0000-000000000000' })
+      .eq('owner_id', ownerA.userId)
+
+    expect(error?.code).toBe('42501')
+
+    const after = await readOwnerARow()
+    expect(after).toEqual(before)
+    expect(after!.id).toBe(ownerA.companyId)
+  })
+
+  it('denies owner A a rewrite of their OWN created_at', async () => {
+    // Same grant, same class of hole. Included because the column-scoped grant
+    // is the single mechanism protecting both, so a regression that reopens one
+    // reopens the other — and a test naming only `id` would let a well-meaning
+    // "just add created_at back" edit pass.
+    //
+    // readOwnerARow() does not select created_at, so this reads it directly
+    // rather than leaning on a comparison that would not actually cover it.
+    const readCreatedAt = async () => {
+      const { data, error } = await admin
+        .from('companies')
+        .select('created_at')
+        .eq('id', ownerA.companyId)
+        .single()
+      if (error) throw error
+      return data.created_at
+    }
+
+    const before = await readCreatedAt()
+
+    const { error } = await ownerA.db
+      .from('companies')
+      .update({ created_at: '2000-01-01T00:00:00.000Z' })
+      .eq('owner_id', ownerA.userId)
+
+    expect(error?.code).toBe('42501')
+    expect(await readCreatedAt()).toBe(before)
+  })
+
   it('denies owner B an INSERT that forges another owner_id', async () => {
     // The `with check` on companies_insert_own is the clause that stops one
     // owner from minting a tenant for someone else. It needs a free owner_id to

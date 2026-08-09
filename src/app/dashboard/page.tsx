@@ -88,6 +88,13 @@ export default async function DashboardPage() {
                 ? 'Add your first submission'
                 : 'View submissions'}
             </Link>
+
+            <Link
+              href="/dashboard/form-link"
+              className="flex h-11 w-full items-center justify-center rounded-full border border-zinc-300 px-5 text-sm font-medium transition-colors hover:bg-black/[.04] dark:border-zinc-700 dark:hover:bg-white/[.06]"
+            >
+              Form link &amp; QR code
+            </Link>
           </>
         ) : (
           <p className="text-sm text-zinc-600 dark:text-zinc-400">

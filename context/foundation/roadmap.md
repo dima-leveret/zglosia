@@ -38,9 +38,9 @@ ten krok działa.
 
 | ID    | Change ID                   | Outcome (Właściciel/Klient może …)                                    | Prerequisites | PRD refs                        | Status   |
 | ----- | --------------------------- | --------------------------------------------------------------------- | ------------- | ------------------------------- | -------- |
-| F-01  | owner-auth-tenant-isolation | (foundation) uwierzytelniony właściciel + izolowany tenant firmy       | —             | FR-001, Access Control, NFR-izolacja | ready    |
-| S-01  | company-profile             | wprowadzić, przejrzeć, edytować i usunąć dane firmy                    | F-01          | FR-002, FR-003                  | proposed |
-| S-02  | submission-intake           | ręcznie dodać, przeglądać i usuwać zgłoszenia firmy                    | F-01          | FR-007, FR-008, FR-009          | proposed |
+| F-01  | owner-auth-tenant-isolation | (foundation) uwierzytelniony właściciel + izolowany tenant firmy       | —             | FR-001, Access Control, NFR-izolacja | done    |
+| S-01  | company-profile             | wprowadzić, przejrzeć, edytować i usunąć dane firmy                    | F-01          | FR-002, FR-003                  | done |
+| S-02  | submission-intake           | ręcznie dodać, przeglądać i usuwać zgłoszenia firmy                    | F-01          | FR-007, FR-008, FR-009          | done |
 | S-03  | generate-action-plan        | wygenerować i zapisać plan działań ze zgłoszeń                         | F-01, S-02    | US-01, FR-011, FR-012           | proposed |
 | S-04  | saved-plans-management      | przeglądać, edytować i usuwać zapisane plany                          | S-03          | FR-013, FR-014                  | proposed |
 | S-05  | public-form-url-qr          | wygenerować nieprzewidywalny adres formularza i kod QR                 | F-01          | FR-004, FR-005, NFR-enumeracja  | proposed |

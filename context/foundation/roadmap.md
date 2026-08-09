@@ -43,8 +43,8 @@ ten krok działa.
 | S-02  | submission-intake           | ręcznie dodać, przeglądać i usuwać zgłoszenia firmy                    | F-01          | FR-007, FR-008, FR-009          | done |
 | S-03  | generate-action-plan        | wygenerować i zapisać plan działań ze zgłoszeń                         | F-01, S-02    | US-01, FR-011, FR-012           | proposed |
 | S-04  | saved-plans-management      | przeglądać, edytować i usuwać zapisane plany                          | S-03          | FR-013, FR-014                  | proposed |
-| S-05  | public-form-url-qr          | wygenerować nieprzewidywalny adres formularza i kod QR                 | F-01          | FR-004, FR-005, NFR-enumeracja  | proposed |
-| S-06  | public-submission-form      | (klient) wysłać zgłoszenie przez publiczny formularz bez logowania    | S-05, S-02    | US-02, FR-006                   | proposed |
+| S-05  | public-form-url-qr          | wygenerować nieprzewidywalny adres formularza i kod QR                 | F-01          | FR-004, FR-005, NFR-enumeracja  | done |
+| S-06  | public-submission-form      | (klient) wysłać zgłoszenie przez publiczny formularz bez logowania    | S-05, S-02    | US-02, FR-006                   | done |
 
 ## Streams
 

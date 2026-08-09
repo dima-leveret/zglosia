@@ -78,8 +78,21 @@ export const config = {
      * - _next/static (static files)
      * - _next/image (image optimization files)
      * - favicon.ico
+     * - f/ (the public submission form, S-06)
      * - common image assets
+     *
+     * `/f/<id>` is excluded for latency, not for authorization: it reads no
+     * session, so refreshing one costs it a getUser() network round trip per
+     * scan — the single largest item on the one path that has to stay fast and
+     * has to keep working while Supabase auth is degraded. PROTECTED_PREFIXES
+     * is untouched, and /f was never in it.
+     *
+     * Excluding a route here cannot weaken anything either way: Server
+     * Functions POST to their own route, so this page's action is unaffected by
+     * matcher changes — the same reasoning recorded above PROTECTED_PREFIXES.
+     * The boundary is RLS: `anon` may insert three columns of a 'form' row and
+     * nothing else.
      */
-    '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico)$).*)',
+    '/((?!_next/static|_next/image|favicon.ico|f/|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico)$).*)',
   ],
 }

@@ -1,11 +1,11 @@
-'use client'
+"use client";
 
-import { useActionState } from 'react'
+import { useActionState } from "react";
 
-import { sendMagicLink } from './actions'
+import { sendMagicLink } from "./actions";
 
 export function LoginForm() {
-  const [state, action, pending] = useActionState(sendMagicLink, undefined)
+  const [state, action, pending] = useActionState(sendMagicLink, undefined);
 
   return (
     <form action={action} className="flex w-full flex-col gap-4">
@@ -34,9 +34,9 @@ export function LoginForm() {
       <button
         type="submit"
         disabled={pending}
-        className="flex h-11 items-center justify-center rounded-full bg-foreground px-5 font-medium text-background transition-colors hover:bg-[#383838] disabled:opacity-60 dark:hover:bg-[#ccc]"
+        className="flex h-11 items-center justify-center rounded-full bg-foreground px-5 font-medium text-background transition-colors hover:bg-[#383838] disabled:opacity-60 dark:hover:bg-[#ccc] cursor-pointer"
       >
-        {pending ? 'Sending…' : 'Send magic link'}
+        {pending ? "Sending…" : "Send magic link"}
       </button>
 
       {state?.message && (
@@ -48,5 +48,5 @@ export function LoginForm() {
         </p>
       )}
     </form>
-  )
+  );
 }

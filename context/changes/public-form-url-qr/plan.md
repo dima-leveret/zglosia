@@ -556,32 +556,32 @@ decision is being revisited, and that is a planning question, not an implementat
 
 #### Automated
 
-- [x] 2.1 Type checking passes: `npx tsc --noEmit`
-- [x] 2.2 Linting passes: `npm run lint`
-- [x] 2.3 Build succeeds and lists `/f/[companyId]` in the route output
+- [x] 2.1 Type checking passes: `npx tsc --noEmit` — 90d6840
+- [x] 2.2 Linting passes: `npm run lint` — 90d6840
+- [x] 2.3 Build succeeds and lists `/f/[companyId]` in the route output — 90d6840
 
 #### Manual
 
-- [x] 2.4 `/f/<real uuid>` renders the placeholder while logged out, with no redirect to `/login`
-- [x] 2.5 A random uuid and a malformed id render identically — no existence oracle
-- [x] 2.6 The page shows no company name and does not echo the id back
+- [x] 2.4 `/f/<real uuid>` renders the placeholder while logged out, with no redirect to `/login` — 90d6840
+- [x] 2.5 A random uuid and a malformed id render identically — no existence oracle — 90d6840
+- [x] 2.6 The page shows no company name and does not echo the id back — 90d6840
 
 ### Phase 3: Owner Surface — URL + QR
 
 #### Automated
 
-- [ ] 3.1 Type checking passes: `npx tsc --noEmit`
-- [ ] 3.2 Linting passes: `npm run lint`
-- [ ] 3.3 Build succeeds: `npm run build`
-- [ ] 3.4 QR helper unit test passes — `<svg`-rooted, deterministic, input-sensitive
+- [x] 3.1 Type checking passes: `npx tsc --noEmit`
+- [x] 3.2 Linting passes: `npm run lint`
+- [x] 3.3 Build succeeds: `npm run build`
+- [x] 3.4 QR helper unit test passes — `<svg`-rooted, deterministic, input-sensitive
 
 #### Manual
 
-- [ ] 3.5 `/dashboard/form-link` shows the absolute URL and a rendered QR code
-- [ ] 3.6 The copy button copies the exact URL shown and confirms visibly
-- [ ] 3.7 The dashboard shows the new "Form link" entry and it navigates correctly
-- [ ] 3.8 A second owner sees a different URL and a different QR
-- [ ] 3.9 With no company provisioned, the page renders the sibling empty-state branch
+- [x] 3.5 `/dashboard/form-link` shows the absolute URL and a rendered QR code
+- [x] 3.6 The copy button copies the exact URL shown and confirms visibly
+- [x] 3.7 The dashboard shows the new "Form link" entry and it navigates correctly
+- [x] 3.8 A second owner sees a different URL and a different QR
+- [x] 3.9 With no company provisioned, the page renders the sibling empty-state branch
 
 ### Phase 4: Downloads, Print, and Scan Verification
 

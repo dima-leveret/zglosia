@@ -22,6 +22,12 @@ export default defineConfig(({ mode }) => ({
   resolve: {
     alias: {
       '@': fileURLToPath(new URL('./src', import.meta.url)),
+      // Next resolves `server-only` through its own bundler alias, so it is not
+      // a package on disk. Anything under src/lib that carries the guard is
+      // unimportable here without a stand-in — see the stub for why it is empty.
+      'server-only': fileURLToPath(
+        new URL('./tests/support/server-only-stub.ts', import.meta.url),
+      ),
     },
   },
   test: {

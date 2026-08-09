@@ -541,16 +541,16 @@ decision is being revisited, and that is a planning question, not an implementat
 
 #### Automated
 
-- [x] 1.1 Type checking passes: `npx tsc --noEmit`
-- [x] 1.2 Linting passes: `npm run lint`
-- [x] 1.3 New site-URL unit tests pass: `npm test`
-- [ ] 1.4 The `companies.id` rewrite guard asserts `42501` and an unchanged row
-- [x] 1.5 `supabase migration list --linked` shows the narrow-grants migration applied remotely
+- [x] 1.1 Type checking passes: `npx tsc --noEmit` — 3585289
+- [x] 1.2 Linting passes: `npm run lint` — 3585289
+- [x] 1.3 New site-URL unit tests pass: `npm test` — 3585289
+- [ ] 1.4 The `companies.id` rewrite guard asserts `42501` and an unchanged row — deferred: no local Supabase; the guards are written in `tests/isolation.test.ts` but unrun
+- [x] 1.5 `supabase migration list --linked` shows the narrow-grants migration applied remotely — 3585289
 
 #### Manual
 
-- [x] 1.6 Magic-link login still completes end to end after the resolver extraction
-- [x] 1.7 `NEXT_PUBLIC_SITE_URL` is set in the Vercel project for Production and Preview
+- [x] 1.6 Magic-link login still completes end to end after the resolver extraction — 3585289
+- [x] 1.7 `NEXT_PUBLIC_SITE_URL` is set in the Vercel project for Production and Preview — 3585289
 
 ### Phase 2: Public Placeholder Route
 

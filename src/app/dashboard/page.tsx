@@ -1,9 +1,9 @@
-import Link from 'next/link'
+import Link from "next/link";
 
-import { getCompany, getSubmissionCount } from '@/lib/dal'
-import { isCompanyProfileComplete } from '@/lib/validation'
+import { getCompany, getSubmissionCount } from "@/lib/dal";
+import { isCompanyProfileComplete } from "@/lib/validation";
 
-import { logout } from './actions'
+import { logout } from "./actions";
 
 /**
  * The isolation proof surface: reads the caller's own company through the DAL
@@ -12,11 +12,11 @@ import { logout } from './actions'
  * and by verifySession() inside the DAL.
  */
 export default async function DashboardPage() {
-  const company = await getCompany()
+  const company = await getCompany();
   // Every account starts with a blank auto-provisioned row, so this is the
   // default state for a new owner — not an edge case.
-  const profileComplete = isCompanyProfileComplete(company)
-  const submissionCount = await getSubmissionCount()
+  const profileComplete = isCompanyProfileComplete(company);
+  const submissionCount = await getSubmissionCount();
 
   return (
     <main className="flex flex-1 flex-col items-center justify-center gap-6 bg-zinc-50 px-6 py-10 dark:bg-black">
@@ -67,9 +67,9 @@ export default async function DashboardPage() {
                 rather than showing a bare "0". */}
             <p className="text-sm text-zinc-600 dark:text-zinc-400">
               {submissionCount === 0
-                ? 'No submissions collected yet.'
+                ? "No submissions collected yet."
                 : submissionCount === 1
-                  ? '1 submission collected.'
+                  ? "1 submission collected."
                   : `${submissionCount} submissions collected.`}
             </p>
 
@@ -77,7 +77,9 @@ export default async function DashboardPage() {
               href="/dashboard/company"
               className="flex h-11 w-full items-center justify-center rounded-full bg-foreground px-5 text-sm font-medium text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc]"
             >
-              {profileComplete ? 'Edit company profile' : 'Complete your profile'}
+              {profileComplete
+                ? "Edit company profile"
+                : "Complete your profile"}
             </Link>
 
             <Link
@@ -85,8 +87,8 @@ export default async function DashboardPage() {
               className="flex h-11 w-full items-center justify-center rounded-full border border-zinc-300 px-5 text-sm font-medium transition-colors hover:bg-black/[.04] dark:border-zinc-700 dark:hover:bg-white/[.06]"
             >
               {submissionCount === 0
-                ? 'Add your first submission'
-                : 'View submissions'}
+                ? "Add your first submission"
+                : "View submissions"}
             </Link>
 
             <Link
@@ -105,12 +107,12 @@ export default async function DashboardPage() {
         <form action={logout}>
           <button
             type="submit"
-            className="flex h-11 w-full items-center justify-center rounded-full border border-zinc-300 px-5 text-sm font-medium transition-colors hover:bg-black/[.04] dark:border-zinc-700 dark:hover:bg-white/[.06]"
+            className="flex h-11 w-full items-center justify-center rounded-full border border-zinc-300 px-5 text-sm font-medium transition-colors hover:bg-black/[.04] dark:border-zinc-700 dark:hover:bg-white/[.06] cursor-pointer"
           >
             Log out
           </button>
         </form>
       </div>
     </main>
-  )
+  );
 }

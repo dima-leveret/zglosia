@@ -570,34 +570,34 @@ decision is being revisited, and that is a planning question, not an implementat
 
 #### Automated
 
-- [x] 3.1 Type checking passes: `npx tsc --noEmit`
-- [x] 3.2 Linting passes: `npm run lint`
-- [x] 3.3 Build succeeds: `npm run build`
-- [x] 3.4 QR helper unit test passes — `<svg`-rooted, deterministic, input-sensitive
+- [x] 3.1 Type checking passes: `npx tsc --noEmit` — d163f5e
+- [x] 3.2 Linting passes: `npm run lint` — d163f5e
+- [x] 3.3 Build succeeds: `npm run build` — d163f5e
+- [x] 3.4 QR helper unit test passes — `<svg`-rooted, deterministic, input-sensitive — d163f5e
 
 #### Manual
 
-- [x] 3.5 `/dashboard/form-link` shows the absolute URL and a rendered QR code
-- [x] 3.6 The copy button copies the exact URL shown and confirms visibly
-- [x] 3.7 The dashboard shows the new "Form link" entry and it navigates correctly
-- [x] 3.8 A second owner sees a different URL and a different QR
-- [x] 3.9 With no company provisioned, the page renders the sibling empty-state branch
+- [x] 3.5 `/dashboard/form-link` shows the absolute URL and a rendered QR code — d163f5e
+- [x] 3.6 The copy button copies the exact URL shown and confirms visibly — d163f5e
+- [x] 3.7 The dashboard shows the new "Form link" entry and it navigates correctly — d163f5e
+- [x] 3.8 A second owner sees a different URL and a different QR — d163f5e
+- [x] 3.9 With no company provisioned, the page renders the sibling empty-state branch — d163f5e
 
 ### Phase 4: Downloads, Print, and Scan Verification
 
 #### Automated
 
-- [ ] 4.1 Type checking passes: `npx tsc --noEmit`
-- [ ] 4.2 Linting passes: `npm run lint`
-- [ ] 4.3 Build succeeds: `npm run build`
-- [ ] 4.4 Full suite green against a local Supabase: `npm test`
+- [x] 4.1 Type checking passes: `npx tsc --noEmit`
+- [x] 4.2 Linting passes: `npm run lint`
+- [x] 4.3 Build succeeds: `npm run build`
+- [ ] 4.4 Full suite green against a local Supabase: `npm test` — deferred, same blocker as 1.4: Docker is unavailable so `supabase start` cannot run. The 3 non-DB suites pass (61 tests, incl. 4 new `renderQrPng` cases); `isolation` and `schema` refuse to run against the remote host by design
 
 #### Manual
 
-- [ ] 4.5 `?format=svg` downloads an attachment that opens in a vector tool
-- [ ] 4.6 `?format=png` downloads a raster image at print resolution
-- [ ] 4.7 An unrecognised `?format=` value returns 400
-- [ ] 4.8 A logged-out request to the QR route redirects to `/login`
-- [ ] 4.9 Owner B's request yields owner B's code — the query string cannot select another company's
-- [ ] 4.10 Scanning the on-screen and printed QR with a phone opens `/f/<uuid>` and shows the placeholder
-- [ ] 4.11 Print preview shows the QR and company name with page chrome hidden
+- [x] 4.5 `?format=svg` downloads an attachment that opens in a vector tool
+- [x] 4.6 `?format=png` downloads a raster image at print resolution
+- [x] 4.7 An unrecognised `?format=` value returns 400
+- [x] 4.8 A logged-out request to the QR route redirects to `/login`
+- [x] 4.9 Owner B's request yields owner B's code — the query string cannot select another company's
+- [x] 4.10 Scanning the on-screen and printed QR with a phone opens `/f/<uuid>` and shows the placeholder
+- [x] 4.11 Print preview shows the QR and company name with page chrome hidden

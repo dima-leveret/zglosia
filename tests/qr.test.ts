@@ -1,6 +1,12 @@
 import { describe, expect, it } from 'vitest'
 
-import { QR_ERROR_CORRECTION_LEVEL, QR_MARGIN, renderQrSvg } from '@/lib/qr'
+import {
+  QR_ERROR_CORRECTION_LEVEL,
+  QR_MARGIN,
+  QR_PNG_WIDTH,
+  renderQrPng,
+  renderQrSvg,
+} from '@/lib/qr'
 
 /**
  * What this suite can and cannot prove.
@@ -61,5 +67,61 @@ describe('renderQrSvg', () => {
     // failing test rather than a screen code and a printed code that differ.
     expect(QR_ERROR_CORRECTION_LEVEL).toBe('Q')
     expect(QR_MARGIN).toBe(2)
+  })
+})
+
+/**
+ * The raster download. Same ceiling as the suite above — no decoder, so these
+ * assert wiring, not readability. The phone scan of the printed PNG is what
+ * proves the symbol.
+ */
+describe('renderQrPng', () => {
+  const url = 'https://zglosia.example/f/3f2a7c58-9b41-4d6e-8a17-5c0e2b9d4f31'
+
+  /** The eight-byte PNG file signature. */
+  const PNG_MAGIC = [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]
+
+  it('returns bytes carrying the PNG signature', async () => {
+    const png = await renderQrPng(url)
+
+    // The route hands this straight to a Response with Content-Type image/png.
+    // If the helper ever returned an SVG string or a data URL instead, the
+    // download would be a file no image viewer opens.
+    expect(Array.from(png.subarray(0, PNG_MAGIC.length))).toEqual(PNG_MAGIC)
+  })
+
+  it('returns a Uint8Array over a plain ArrayBuffer', async () => {
+    const png = await renderQrPng(url)
+
+    // Not pedantry: a Node Buffer's backing store is typed ArrayBufferLike,
+    // which BodyInit rejects. This is the property that lets the route pass the
+    // body to Response without a cast.
+    expect(png).toBeInstanceOf(Uint8Array)
+    expect(png.buffer).toBeInstanceOf(ArrayBuffer)
+  })
+
+  it('is deterministic for one input and differs across inputs', async () => {
+    const other =
+      'https://zglosia.example/f/8c1d0e44-2f73-4a90-b6e5-1d83c7f0a2b6'
+    const [first, second, third] = await Promise.all([
+      renderQrPng(url),
+      renderQrPng(url),
+      renderQrPng(other),
+    ])
+
+    expect(first).toEqual(second)
+    expect(first).not.toEqual(third)
+  })
+
+  it('renders at the configured print width', async () => {
+    const png = await renderQrPng(url)
+
+    // Width lives in the IHDR chunk as a big-endian uint32 at byte offset 16.
+    // Read back rather than trusted, because `width` is silently ignored by the
+    // library when it is smaller than the symbol — a shrinking edit to
+    // QR_PNG_WIDTH would otherwise pass unnoticed and ship a blurry print file.
+    const width = new DataView(png.buffer, png.byteOffset).getUint32(16)
+
+    expect(width).toBe(QR_PNG_WIDTH)
   })
 })

@@ -41,3 +41,47 @@ export async function renderQrSvg(text: string): Promise<string> {
     margin: QR_MARGIN,
   })
 }
+
+/**
+ * Pixel width of the downloadable PNG.
+ *
+ * The raster download exists for tools that cannot place an SVG — a word
+ * processor, a print shop's upload form. 1024px across a ~41-module symbol is
+ * ~25px per module, which still prints crisply at the postcard sizes S-05
+ * targets; below a few hundred pixels the modules alias and the code stops
+ * scanning off paper.
+ */
+export const QR_PNG_WIDTH = 1024
+
+/**
+ * The same QR code as `renderQrSvg`, rasterised.
+ *
+ * `qrcode` renders PNG through pngjs, in pure JS — no `node-canvas`, no native
+ * build. That is the reason this can run inside a route handler at all, and the
+ * reason the download path needs no client-side canvas step.
+ *
+ * Returned as a `Uint8Array` over a plain `ArrayBuffer` rather than the `Buffer`
+ * the library hands back. `Response` takes a `BodyInit`, which a Node `Buffer`
+ * only incidentally satisfies — its backing store is typed `ArrayBufferLike`
+ * (it may sit in a `SharedArrayBuffer`), and `BodyInit` does not accept that.
+ * Copying into a fresh buffer is a few kilobytes and makes the type honest
+ * rather than casting the mismatch away.
+ */
+export async function renderQrPng(
+  text: string
+): Promise<Uint8Array<ArrayBuffer>> {
+  const buffer = await QRCode.toBuffer(text, {
+    type: 'png',
+    // Identical to the SVG path on purpose — the printed code and the code on
+    // screen have to be the same symbol, not two encodings that happen to
+    // resolve to the same URL.
+    errorCorrectionLevel: QR_ERROR_CORRECTION_LEVEL,
+    margin: QR_MARGIN,
+    width: QR_PNG_WIDTH,
+  })
+
+  const bytes = new Uint8Array(buffer.byteLength)
+  bytes.set(buffer)
+
+  return bytes
+}

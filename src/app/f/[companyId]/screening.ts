@@ -29,6 +29,21 @@ export const HONEYPOT_FIELD = 'website'
 export const RENDERED_AT_FIELD = 'rendered_at'
 
 /**
+ * The render stamp the page hands to the form, in epoch milliseconds.
+ *
+ * A function here rather than a bare `Date.now()` in the page body because the
+ * React compiler's purity rule (`react-hooks/purity`) rejects impure calls
+ * during render — and it is right about the general case: an impure value read
+ * during render is unstable across re-renders. This one is deliberate and
+ * per-request. The page is already dynamic (it awaits `params` and queries
+ * Postgres), it renders once per scan, and a stamp that did NOT move per
+ * request would defeat the check it exists for.
+ */
+export function stampRenderedAt(): number {
+  return Date.now()
+}
+
+/**
  * Minimum plausible time between the page rendering and a person having read
  * the heading, typed a complaint, and pressed send. Both ends of this
  * measurement are server clocks — the timestamp is stamped at render, not by

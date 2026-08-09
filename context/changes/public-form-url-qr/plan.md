@@ -587,17 +587,17 @@ decision is being revisited, and that is a planning question, not an implementat
 
 #### Automated
 
-- [x] 4.1 Type checking passes: `npx tsc --noEmit`
-- [x] 4.2 Linting passes: `npm run lint`
-- [x] 4.3 Build succeeds: `npm run build`
+- [x] 4.1 Type checking passes: `npx tsc --noEmit` — b853339
+- [x] 4.2 Linting passes: `npm run lint` — b853339
+- [x] 4.3 Build succeeds: `npm run build` — b853339
 - [ ] 4.4 Full suite green against a local Supabase: `npm test` — deferred, same blocker as 1.4: Docker is unavailable so `supabase start` cannot run. The 3 non-DB suites pass (61 tests, incl. 4 new `renderQrPng` cases); `isolation` and `schema` refuse to run against the remote host by design
 
 #### Manual
 
-- [x] 4.5 `?format=svg` downloads an attachment that opens in a vector tool
-- [x] 4.6 `?format=png` downloads a raster image at print resolution
-- [x] 4.7 An unrecognised `?format=` value returns 400
-- [x] 4.8 A logged-out request to the QR route redirects to `/login`
-- [x] 4.9 Owner B's request yields owner B's code — the query string cannot select another company's
-- [x] 4.10 Scanning the on-screen and printed QR with a phone opens `/f/<uuid>` and shows the placeholder
-- [x] 4.11 Print preview shows the QR and company name with page chrome hidden
+- [x] 4.5 `?format=svg` downloads an attachment that opens in a vector tool — b853339
+- [x] 4.6 `?format=png` downloads a raster image at print resolution — b853339
+- [x] 4.7 An unrecognised `?format=` value returns 400 — b853339
+- [x] 4.8 A logged-out request to the QR route redirects to `/login` — b853339
+- [x] 4.9 Owner B's request yields owner B's code — the query string cannot select another company's — b853339
+- [x] 4.10 Scanning the on-screen and printed QR with a phone opens `/f/<uuid>` and shows the placeholder — b853339
+- [x] 4.11 Print preview shows the QR and company name with page chrome hidden — b853339

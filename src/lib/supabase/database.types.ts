@@ -110,6 +110,12 @@ export type Database = {
     }
     Functions: {
       current_company_id: { Args: never; Returns: string }
+      public_form_company: {
+        Args: { p_company_id: string }
+        Returns: {
+          name: string
+        }[]
+      }
     }
     Enums: {
       submission_source: "manual" | "form"

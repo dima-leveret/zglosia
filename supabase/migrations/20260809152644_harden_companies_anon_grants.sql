@@ -1,0 +1,38 @@
+-- Retrofit the missing anon revoke on public.companies.
+--
+-- Found while verifying S-06's Phase 1 privilege criteria against the linked
+-- project. A bare anon-key client with no session was probed against every verb;
+-- the discriminator is the error text, because a granted-but-RLS-filtered verb
+-- and a correctly-ungranted one look nothing alike:
+--
+--   companies:   select -> no error, rows=[]                     GRANT EXISTS
+--                insert -> 42501 "new row violates RLS policy"   GRANT EXISTS
+--                update -> no error, rows=null                   GRANT EXISTS
+--                delete -> no error, rows=null                   GRANT EXISTS
+--   submissions: select -> 42501 "permission denied for table"   NO GRANT
+--
+-- Cause: 20260726104601_owner_auth_tenant_isolation.sql creates public.companies
+-- with RLS and four policies but never revokes the role defaults. The linked
+-- project predates the current Supabase default and DOES auto-expose new tables,
+-- so `create table` handed anon ALL before any grant in the repo ran. S-02
+-- learned this and opens with an explicit revoke
+-- (20260804171802_submission_intake.sql:72, "Do not delete this as a no-op");
+-- companies was never retrofitted. On a fresh `supabase db reset` the defaults
+-- are absent and this file is a no-op — which is exactly why the gap stayed
+-- invisible in the repo while being real in the database.
+--
+-- Nothing leaks today: every companies policy is `to authenticated`, so anon
+-- gets zero rows and zero affected rows. This is the missing second layer, not
+-- an open door. It is worth closing now, in the slice that opens the product's
+-- first anon privileges, because the layer it restores is the only thing
+-- standing between a future `to anon` policy on this table and handing over
+-- every tenant row in one unfiltered PostgREST select. S-06 deliberately routes
+-- the public form's name lookup through the security definer function
+-- public.public_form_company() for that exact reason; a definer function is
+-- unaffected by the caller's grants, so this revoke does not touch it.
+--
+-- Scoped to `anon` only. The narrowed `authenticated` surface from
+-- 20260730190000_narrow_company_write_grants.sql — select, delete, and
+-- update (name, industry, description, location) — is deliberate and stays.
+
+revoke all on public.companies from anon;

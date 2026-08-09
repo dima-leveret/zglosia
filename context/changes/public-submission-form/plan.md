@@ -623,30 +623,30 @@ other submission apart from their `source`.
 #### Automated
 
 - [ ] 1.1 Migration applies against a local database from empty (`supabase db reset`)
-- [x] 1.2 Migration applied remotely (`supabase db push` + `migration list --linked` shows it)
-- [x] 1.3 Type generation produces a diff containing `public_form_company`
-- [x] 1.4 Type checking passes (`npx tsc --noEmit`)
-- [x] 1.5 Linting passes (`npm run lint`)
-- [x] 1.6 Existing suites still pass (`npm run test:remote`)
+- [x] 1.2 Migration applied remotely (`supabase db push` + `migration list --linked` shows it) — 8140396
+- [x] 1.3 Type generation produces a diff containing `public_form_company` — 8140396
+- [x] 1.4 Type checking passes (`npx tsc --noEmit`) — 8140396
+- [x] 1.5 Linting passes (`npm run lint`) — 8140396
+- [x] 1.6 Existing suites still pass (`npm run test:remote`) — 8140396
 
 #### Manual
 
-- [x] 1.7 `anon` has no select, update, or delete privilege on `public.submissions`
-- [x] 1.8 `anon` has no select privilege on `public.companies`
-- [x] 1.9 Owner-facing submission add and delete still work in the running app
+- [x] 1.7 `anon` has no select, update, or delete privilege on `public.submissions` — 8140396
+- [x] 1.8 `anon` has no select privilege on `public.companies` — 8140396
+- [x] 1.9 Owner-facing submission add and delete still work in the running app — 8140396
 
 ### Phase 2: Anon contract tests
 
 #### Automated
 
 - [ ] 2.1 Full suite passes against a local database (`npm test`)
-- [ ] 2.2 Full suite passes against the linked project (`npm run test:remote`)
+- [x] 2.2 Full suite passes against the linked project (`npm run test:remote`)
 - [ ] 2.3 New cases fail when their policy or grant is temporarily dropped
-- [ ] 2.4 Linting passes (`npm run lint`)
+- [x] 2.4 Linting passes (`npm run lint`)
 
 #### Manual
 
-- [ ] 2.5 Throttle block leaves no fixture rows behind across consecutive runs
+- [x] 2.5 Throttle block leaves no fixture rows behind across consecutive runs
 
 ### Phase 3: Submit path
 

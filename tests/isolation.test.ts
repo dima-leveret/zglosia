@@ -676,3 +676,374 @@ describe('submission source integrity', () => {
     expect(data![0].source).toBe('manual')
   })
 })
+
+/**
+ * S-06 opens the product's FIRST unauthenticated write path. Until the
+ * migration this block covers, `anon` held zero privileges on every table
+ * (20260804171802_submission_intake.sql:72 revokes them outright), so NO
+ * existing coverage transfers here — every denial below is a distinct grant or
+ * policy that can regress on its own.
+ *
+ * Read this block as the answer to one question: what can a stranger holding
+ * nothing but the public anon key and a company id do? The intended answer is
+ * "insert one submission marked 'form', up to an hourly cap, and learn that
+ * company's display name" — and nothing else. Anything the form's UI or its
+ * Server Action does on top is a speed bump; these assertions are the boundary,
+ * because they are what holds against a caller who skips the page entirely and
+ * posts straight at PostgREST.
+ */
+describe('public form anon surface', () => {
+  /**
+   * A session-less anon client that is NEVER signed in. That absence is the
+   * point, not an oversight: `createClient()` in src/lib/supabase/server.ts
+   * binds to request cookies, so a logged-in owner filling in their own public
+   * form would execute as `authenticated`, hit submissions_insert_own_manual,
+   * and be refused for source = 'form'. The public path must always run as
+   * `anon` regardless of who is browsing, and this client is what that shape
+   * looks like.
+   */
+  const anon = createClient(url!, anonKey!, {
+    auth: { autoRefreshToken: false, persistSession: false },
+  })
+
+  /** 30 form submissions per company per hour — enforce_form_submission_rate(). */
+  const FORM_SUBMISSION_CAP = 30
+
+  const FORM_OWNER_NAME = 'Kawiarnia Pod Kotem'
+
+  /**
+   * The public form's own tenant, created here rather than reusing ownerA/
+   * ownerB so the rows this block writes cannot perturb the list-shape
+   * expectations of the suites above.
+   */
+  let formOwner: Owner
+  /** A 'manual' row owned by formOwner, used as the target of the write denials. */
+  let formOwnerSubmissionId: string
+
+  beforeAll(async () => {
+    formOwner = await createOwner('form')
+
+    // Seeded past RLS: the name is what public_form_company() must return, and
+    // the fixture must not depend on the policies under test.
+    const { error: nameError } = await admin
+      .from('companies')
+      .update({ name: FORM_OWNER_NAME })
+      .eq('id', formOwner.companyId)
+    if (nameError) throw nameError
+
+    const { data, error } = await admin
+      .from('submissions')
+      .insert({
+        company_id: formOwner.companyId,
+        content: 'Owner-entered row. Anon must not be able to touch it.',
+        source: 'manual',
+      })
+      .select('id')
+      .single()
+    if (error) throw error
+    formOwnerSubmissionId = data.id
+  })
+
+  afterAll(async () => {
+    await formOwner.db.auth.signOut()
+    // ON DELETE CASCADE reaches companies and then submissions, so this leaves
+    // no fixture rows behind for the next run to trip over.
+    await admin.auth.admin.deleteUser(formOwner.userId)
+  })
+
+  it("lets anon insert a submission marked 'form' against a real company", async () => {
+    // Positive control. Without it every denial below would also pass on a
+    // surface that refuses everything, and this block would report a perfectly
+    // locked-down public form that nobody can actually submit to.
+    const content = `Customer submission at ${new Date().toISOString()}`
+
+    // No .select(): `anon` has no select grant, and INSERT ... RETURNING needs
+    // one. That is fine here — unlike the silent zero-row UPDATE/DELETE the
+    // .select('id') seatbelt exists to catch, a rejected INSERT is loud (42501
+    // from the policy, 23503 from the FK, 23514 from the CHECK).
+    const { error } = await anon.from('submissions').insert({
+      company_id: formOwner.companyId,
+      content,
+      source: 'form',
+    })
+
+    expect(error).toBeNull()
+
+    // The assertion that means something: the row exists, on the right tenant,
+    // carrying the provenance the policy pinned.
+    const { data: rows, error: readError } = await admin
+      .from('submissions')
+      .select('id, company_id, source, content')
+      .eq('content', content)
+    expect(readError).toBeNull()
+    expect(rows).toHaveLength(1)
+    expect(rows![0]).toMatchObject({
+      company_id: formOwner.companyId,
+      source: 'form',
+    })
+  })
+
+  it("denies anon an INSERT claiming source 'manual'", async () => {
+    // The mirror image of the owner-side forgery denial above. Together they
+    // are what makes FR-008's origin marking a database guarantee: neither role
+    // can write the other's provenance, so 'manual' and 'form' are not
+    // interchangeable labels an attacker picks.
+    const content = 'Anon pretending to be the owner.'
+
+    const { error } = await anon.from('submissions').insert({
+      company_id: formOwner.companyId,
+      content,
+      source: 'manual',
+    })
+
+    expect(error?.code).toBe('42501')
+
+    const { data: rows, error: readError } = await admin
+      .from('submissions')
+      .select('id')
+      .eq('content', content)
+    expect(readError).toBeNull()
+    expect(rows).toHaveLength(0)
+  })
+
+  it('denies anon an INSERT naming a company that does not exist', async () => {
+    // submissions_insert_public_form deliberately does not constrain
+    // company_id — the link IS the capability. The foreign key is what refuses
+    // an id naming no company, which is why this asserts 23503 and not 42501.
+    const content = 'Submission aimed at nothing.'
+
+    const { error } = await anon.from('submissions').insert({
+      company_id: randomUUID(),
+      content,
+      source: 'form',
+    })
+
+    expect(error?.code).toBe('23503')
+
+    const { data: rows, error: readError } = await admin
+      .from('submissions')
+      .select('id')
+      .eq('content', content)
+    expect(readError).toBeNull()
+    expect(rows).toHaveLength(0)
+  })
+
+  it('denies anon every read of submissions', async () => {
+    // Assert on the ERROR, not on an empty array. An empty array is also what a
+    // GRANTED select with no matching policy returns, and the two must never be
+    // confused: one means "anon cannot read this table", the other means "anon
+    // can read this table and today no policy lets any row through".
+    const { error } = await anon.from('submissions').select('id, content')
+
+    expect(error?.code).toBe('42501')
+
+    // ...and the rows are really there, so the denial is the grant and not an
+    // empty table.
+    const { data: rows, error: readError } = await admin
+      .from('submissions')
+      .select('id')
+      .eq('id', formOwnerSubmissionId)
+    expect(readError).toBeNull()
+    expect(rows).toHaveLength(1)
+  })
+
+  it('denies anon every read of companies', async () => {
+    // The mass-disclosure case. PostgREST allows an unfiltered select, so a
+    // single readable-by-anon policy on this table would hand over every
+    // tenant row in one request — which is precisely why the public form's name
+    // lookup is a security definer function taking an exact-match id, and never
+    // a policy. Same reasoning as above: the error is the assertion.
+    const { error } = await anon.from('companies').select('id, name, owner_id')
+
+    expect(error?.code).toBe('42501')
+
+    const { data: rows, error: readError } = await admin
+      .from('companies')
+      .select('id')
+      .eq('id', formOwner.companyId)
+    expect(readError).toBeNull()
+    expect(rows).toHaveLength(1)
+  })
+
+  it("denies anon an UPDATE of a submission, leaving it unchanged", async () => {
+    const { data: before, error: beforeError } = await admin
+      .from('submissions')
+      .select('id, company_id, content, source, created_at')
+      .eq('id', formOwnerSubmissionId)
+      .single()
+    expect(beforeError).toBeNull()
+
+    const { error } = await anon
+      .from('submissions')
+      .update({ content: 'REWRITTEN BY A STRANGER' })
+      .eq('id', formOwnerSubmissionId)
+
+    // Refused at the grant layer — anon holds insert on three columns and
+    // nothing else — so this fails loudly rather than silently matching zero
+    // rows the way a granted-but-RLS-filtered update would.
+    expect(error?.code).toBe('42501')
+
+    const { data: after, error: afterError } = await admin
+      .from('submissions')
+      .select('id, company_id, content, source, created_at')
+      .eq('id', formOwnerSubmissionId)
+      .single()
+    expect(afterError).toBeNull()
+    expect(after).toEqual(before)
+  })
+
+  it('denies anon a DELETE of a submission, leaving it present', async () => {
+    const { error } = await anon
+      .from('submissions')
+      .delete()
+      .eq('id', formOwnerSubmissionId)
+
+    expect(error?.code).toBe('42501')
+
+    const { data: rows, error: readError } = await admin
+      .from('submissions')
+      .select('id')
+      .eq('id', formOwnerSubmissionId)
+    expect(readError).toBeNull()
+    expect(rows).toHaveLength(1)
+  })
+
+  it('resolves a live company id to its name through public_form_company', async () => {
+    const { data, error } = await anon.rpc('public_form_company', {
+      p_company_id: formOwner.companyId,
+    })
+
+    expect(error).toBeNull()
+    expect(data).toHaveLength(1)
+    expect(data![0].name).toBe(FORM_OWNER_NAME)
+  })
+
+  it('returns one row with a NULL name for a live link whose profile is unfilled', async () => {
+    // The middle case, and the reason the function returns a TABLE rather than
+    // a scalar: "live link, company not named yet" must be distinguishable from
+    // "dead link", because the page renders different things for each and a
+    // scalar NULL collapses them into one.
+    const unnamed = await createOwner('form-unnamed')
+    try {
+      const { data, error } = await anon.rpc('public_form_company', {
+        p_company_id: unnamed.companyId,
+      })
+
+      expect(error).toBeNull()
+      expect(data).toHaveLength(1)
+      expect(data![0].name).toBeNull()
+    } finally {
+      await unnamed.db.auth.signOut()
+      await admin.auth.admin.deleteUser(unnamed.userId)
+    }
+  })
+
+  it('returns zero rows from public_form_company for an unknown id', async () => {
+    // The dead-link branch keys on exactly this: a link whose account is gone
+    // must tell the customer so BEFORE they type 2000 characters and lose them.
+    const { data, error } = await anon.rpc('public_form_company', {
+      p_company_id: randomUUID(),
+    })
+
+    expect(error).toBeNull()
+    expect(data).toEqual([])
+  })
+
+  /**
+   * The abuse bound (PRD NFR: repel mass automated submissions without blocking
+   * an ordinary customer filing one). It lives in a BEFORE INSERT trigger, so
+   * it holds against a script posting straight at PostgREST — the honeypot and
+   * the timing check on the form cannot be asserted here because they are not
+   * part of the boundary.
+   *
+   * Its own throwaway tenant, created inside this block and torn down after:
+   * 30 rows of fixture data on a shared company would poison the list-shape
+   * expectations of every neighbouring suite.
+   */
+  describe('hourly form submission cap', () => {
+    let capOwner: Owner
+
+    beforeAll(async () => {
+      capOwner = await createOwner('form-cap')
+
+      // Seed the cap MINUS ONE past RLS in a single statement, so the boundary
+      // itself is still exercised by a real anon insert below rather than being
+      // assumed. A batch is safe regardless of how the trigger's count sees
+      // rows from its own statement: starting from zero it can reach at most
+      // FORM_SUBMISSION_CAP - 2, which is under the threshold either way.
+      const { error } = await admin.from('submissions').insert(
+        Array.from({ length: FORM_SUBMISSION_CAP - 1 }, (_, i) => ({
+          company_id: capOwner.companyId,
+          content: `Seeded form submission ${i + 1}`,
+          source: 'form' as const,
+        }))
+      )
+      if (error) throw error
+    })
+
+    afterAll(async () => {
+      await capOwner.db.auth.signOut()
+      // Cascade takes the company and all 30 submissions with it, so a second
+      // consecutive run of this suite starts from the same empty state.
+      await admin.auth.admin.deleteUser(capOwner.userId)
+    })
+
+    it('accepts the last insert under the cap and refuses the one past it', async () => {
+      const under = await anon.from('submissions').insert({
+        company_id: capOwner.companyId,
+        content: 'The last one that fits.',
+        source: 'form',
+      })
+      // The cap must not fire early: a real business hitting 29 in an hour is
+      // still a customer, not an attacker.
+      expect(under.error).toBeNull()
+
+      const over = await anon.from('submissions').insert({
+        company_id: capOwner.companyId,
+        content: 'One too many.',
+        source: 'form',
+      })
+
+      // PostgREST's PTxyz -> HTTP xyz mapping is the one link in this chain
+      // that cannot be verified by reading this repo, so log what actually
+      // arrived before asserting on it. If the mapping ever changes, the run
+      // output names the replacement instead of only saying "expected PT429".
+      console.info(
+        '[form cap] rejection as received by supabase-js:',
+        JSON.stringify(over.error)
+      )
+      expect(over.error).not.toBeNull()
+      expect(over.error?.code).toBe('PT429')
+
+      // The decisive assertion: the row did not land. Exactly the cap, no more.
+      const { count, error: countError } = await admin
+        .from('submissions')
+        .select('id', { count: 'exact', head: true })
+        .eq('company_id', capOwner.companyId)
+        .eq('source', 'form')
+      expect(countError).toBeNull()
+      expect(count).toBe(FORM_SUBMISSION_CAP)
+    })
+
+    it("leaves the owner's manual path working once the cap is exhausted", async () => {
+      // The trigger short-circuits for source <> 'form'. Without this case a
+      // change that capped the table rather than the public channel would lock
+      // the owner out of their own feature during exactly the hour they most
+      // need to look at it — and every other assertion here would still pass.
+      const content = `Owner adding one by hand at ${new Date().toISOString()}`
+
+      const { data, error } = await capOwner.db
+        .from('submissions')
+        .insert({
+          company_id: capOwner.companyId,
+          content,
+          source: 'manual',
+        })
+        .select('id, source')
+
+      expect(error).toBeNull()
+      expect(data).toHaveLength(1)
+      expect(data![0].source).toBe('manual')
+    })
+  })
+})

@@ -48,6 +48,36 @@ export async function createClient() {
 }
 
 /**
+ * Session-less client for the public submission form (S-06), the product's only
+ * unauthenticated path. Queries Postgres AS `anon`, always.
+ *
+ * The absence of a cookie adapter is the feature, not an omission. `createClient()`
+ * above binds to the request cookies, so if the person filling in the public form
+ * happens to be a logged-in owner in that browser, the insert would execute as
+ * `authenticated`, hit `submissions_insert_own_manual` — whose `with check` pins
+ * `source = 'manual'` — and be rejected with 42501. That failure mode is closed,
+ * not open, and it only bites the person most likely to test the form and least
+ * likely to suspect the client. Reading no cookies is what makes the role
+ * independent of who is browsing.
+ *
+ * Privileges are exactly what 20260809151843_public_submission_form.sql grants
+ * `anon`: insert (company_id, content, source) on submissions, execute on
+ * public_form_company(). No select on anything.
+ */
+export function createPublicClient() {
+  return createSupabaseClient<Database>(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      // Same reasoning as the admin client below: there is no user session to
+      // keep alive here, and auth-js would otherwise leave a refresh ticker
+      // behind on every request that constructs one.
+      auth: { autoRefreshToken: false, persistSession: false },
+    }
+  )
+}
+
+/**
  * Service-role admin client that BYPASSES RLS. Reserved for privileged /
  * test-only operations — never use for owner-facing reads.
  */

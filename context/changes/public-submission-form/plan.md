@@ -640,27 +640,27 @@ other submission apart from their `source`.
 #### Automated
 
 - [ ] 2.1 Full suite passes against a local database (`npm test`)
-- [x] 2.2 Full suite passes against the linked project (`npm run test:remote`)
+- [x] 2.2 Full suite passes against the linked project (`npm run test:remote`) — 1971151
 - [ ] 2.3 New cases fail when their policy or grant is temporarily dropped
-- [x] 2.4 Linting passes (`npm run lint`)
+- [x] 2.4 Linting passes (`npm run lint`) — 1971151
 
 #### Manual
 
-- [x] 2.5 Throttle block leaves no fixture rows behind across consecutive runs
+- [x] 2.5 Throttle block leaves no fixture rows behind across consecutive runs — 1971151
 
 ### Phase 3: Submit path
 
 #### Automated
 
-- [ ] 3.1 Type checking passes (`npx tsc --noEmit`)
-- [ ] 3.2 Linting passes (`npm run lint`)
-- [ ] 3.3 Existing suites still pass (`npm run test:remote`)
-- [ ] 3.4 `createPublicClient` is imported by the public action and nothing under `src/app/dashboard/`
+- [x] 3.1 Type checking passes (`npx tsc --noEmit`)
+- [x] 3.2 Linting passes (`npm run lint`)
+- [x] 3.3 Existing suites still pass (`npm run test:remote`)
+- [x] 3.4 `createPublicClient` is imported by the public action and nothing under `src/app/dashboard/`
 
 #### Manual
 
-- [ ] 3.5 Action contains no `verifySession`, no `getCompany`, and no `createClient`
-- [ ] 3.6 `company_id` reaches the insert from the bound route parameter and no other source
+- [x] 3.5 Action contains no `verifySession`, no `getCompany`, and no `createClient`
+- [x] 3.6 `company_id` reaches the insert from the bound route parameter and no other source
 
 ### Phase 4: Public form page and acceptance
 

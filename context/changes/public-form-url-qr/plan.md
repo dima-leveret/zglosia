@@ -556,15 +556,15 @@ decision is being revisited, and that is a planning question, not an implementat
 
 #### Automated
 
-- [ ] 2.1 Type checking passes: `npx tsc --noEmit`
-- [ ] 2.2 Linting passes: `npm run lint`
-- [ ] 2.3 Build succeeds and lists `/f/[companyId]` in the route output
+- [x] 2.1 Type checking passes: `npx tsc --noEmit`
+- [x] 2.2 Linting passes: `npm run lint`
+- [x] 2.3 Build succeeds and lists `/f/[companyId]` in the route output
 
 #### Manual
 
-- [ ] 2.4 `/f/<real uuid>` renders the placeholder while logged out, with no redirect to `/login`
-- [ ] 2.5 A random uuid and a malformed id render identically — no existence oracle
-- [ ] 2.6 The page shows no company name and does not echo the id back
+- [x] 2.4 `/f/<real uuid>` renders the placeholder while logged out, with no redirect to `/login`
+- [x] 2.5 A random uuid and a malformed id render identically — no existence oracle
+- [x] 2.6 The page shows no company name and does not echo the id back
 
 ### Phase 3: Owner Surface — URL + QR
 

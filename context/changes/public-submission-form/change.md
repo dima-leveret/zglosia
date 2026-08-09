@@ -1,7 +1,7 @@
 ---
 change_id: public-submission-form
 title: Publiczny formularz zgłoszeń — klient wysyła bez logowania
-status: implementing
+status: implemented
 created: 2026-08-09
 updated: 2026-08-09
 archived_at: null

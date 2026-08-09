@@ -666,19 +666,19 @@ other submission apart from their `source`.
 
 #### Automated
 
-- [x] 4.1 Production build succeeds (`npm run build`)
-- [x] 4.2 Type checking passes (`npx tsc --noEmit`)
-- [x] 4.3 Linting passes (`npm run lint`)
-- [x] 4.4 Full suite passes (`npm run test:remote`)
+- [x] 4.1 Production build succeeds (`npm run build`) — 0336523
+- [x] 4.2 Type checking passes (`npx tsc --noEmit`) — 0336523
+- [x] 4.3 Linting passes (`npm run lint`) — 0336523
+- [x] 4.4 Full suite passes (`npm run test:remote`) — 0336523
 
 #### Manual
 
-- [x] 4.5 Phone scan of the QR opens the form showing the correct company name
-- [x] 4.6 Phone submission confirms, and the row appears badged as coming from the form
-- [x] 4.7 "Send another" returns an empty form and a second submission lands
-- [x] 4.8 Blank or whitespace-only content shows the inline Polish error
-- [x] 4.9 A random uuid shows the dead-link panel, not a 404 and not a form
-- [x] 4.10 Submitting while logged in as the owner in the same browser still works
-- [x] 4.11 Owner B's dashboard shows none of owner A's form submissions
-- [x] 4.12 Exceeding the hourly cap shows the throttled message; manual add still works
-- [x] 4.13 The dashboard remains English and only the `/f` surface is Polish
+- [x] 4.5 Phone scan of the QR opens the form showing the correct company name — 0336523
+- [x] 4.6 Phone submission confirms, and the row appears badged as coming from the form — 0336523
+- [x] 4.7 "Send another" returns an empty form and a second submission lands — 0336523
+- [x] 4.8 Blank or whitespace-only content shows the inline Polish error — 0336523
+- [x] 4.9 A random uuid shows the dead-link panel, not a 404 and not a form — 0336523
+- [x] 4.10 Submitting while logged in as the owner in the same browser still works — 0336523
+- [x] 4.11 Owner B's dashboard shows none of owner A's form submissions — 0336523
+- [x] 4.12 Exceeding the hourly cap shows the throttled message; manual add still works — 0336523
+- [x] 4.13 The dashboard remains English and only the `/f` surface is Polish — 0336523

@@ -1,33 +1,14 @@
 'use server'
 
+import { SITE_URL } from '@/lib/site-url'
 import { createClient } from '@/lib/supabase/server'
 import { LoginSchema, type FormState } from '@/lib/validation'
 
 /**
- * The magic link's destination must never be derived from the request. Next's
- * Server Action CSRF check only requires `Origin` to *match* `Host` — it pins
- * neither to our real domain — so a spoofed pair would put an attacker's host
- * into a genuine Supabase email and hand them the one-time token. Pin it to a
- * server-side value instead, and keep this origin in Supabase's redirect
- * allow-list (see supabase/config.toml [auth]).
- *
- * `VERCEL_PROJECT_PRODUCTION_URL` is the platform-injected production domain
- * (host only, no scheme) — still a server-side value, never request-derived. It
- * backstops a forgotten `NEXT_PUBLIC_SITE_URL` on Vercel so a deploy cannot
- * silently mail out `http://localhost:3000` links; localhost stays the default
- * only when neither is set (local dev).
+ * The magic link's destination must never be derived from the request — see the
+ * comment on `resolveSiteUrl` in @/lib/site-url for why. Keep this origin in
+ * Supabase's redirect allow-list (see supabase/config.toml [auth]).
  */
-function resolveSiteUrl(): string {
-  if (process.env.NEXT_PUBLIC_SITE_URL) {
-    return process.env.NEXT_PUBLIC_SITE_URL
-  }
-  if (process.env.VERCEL_PROJECT_PRODUCTION_URL) {
-    return `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`
-  }
-  return 'http://localhost:3000'
-}
-
-const SITE_URL = resolveSiteUrl()
 
 /**
  * Validates the submitted email and asks Supabase to send a magic link pointed

@@ -48,6 +48,13 @@ export const PLAN_GENERATION_TIMED_OUT =
 export const PLAN_GENERATION_THROTTLED =
   'You have reached the daily limit for generating action plans. Please try again tomorrow.'
 
+/**
+ * Reserved, and deliberately unread today. savePlan() ends in redirect(), which
+ * throws, so this slice has no render path a success message could reach —
+ * SaveState in actions.ts says the same thing from the other side. It is kept
+ * for S-04's save-in-place edits (FR-014), where a save that stays on the page
+ * does need to confirm itself.
+ */
 export const PLAN_SAVED = 'Action plan saved.'
 
 /**

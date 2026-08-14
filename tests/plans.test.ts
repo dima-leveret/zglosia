@@ -370,6 +370,26 @@ describe('save_action_plan grounding', () => {
     expect(await countPlans(ownerA.companyId)).toBe(before)
   })
 
+  it('refuses a problem list longer than PLAN_PROBLEMS_MAX', async () => {
+    // The other half of the same range check. PLAN_PROBLEMS_MAX = 8 lives in
+    // src/lib/plan-schema.ts, and Zod is not a boundary — a direct PostgREST
+    // call skips it, which is exactly the caller this bound exists for.
+    const before = await countPlans(ownerA.companyId)
+
+    const { error } = await ownerA.db.rpc('save_action_plan', {
+      p_summary: 'Za dużo problemów.',
+      p_problems: Array.from({ length: 9 }, (_, index) => ({
+        title: `Problem ${index + 1}`,
+        rationale: 'Wypełniacz, żeby przekroczyć limit.',
+        submissionIds: [subA[0]],
+        actions: ['Nie powinno się zapisać.'],
+      })),
+    })
+
+    expect(error?.code).toBe('22023')
+    expect(await countPlans(ownerA.companyId)).toBe(before)
+  })
+
   it('refuses a problem carrying no citations', async () => {
     const before = await countPlans(ownerA.companyId)
 

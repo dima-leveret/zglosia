@@ -1,6 +1,7 @@
 import Link from 'next/link'
 
 import {
+  SUBMISSION_LIST_LIMIT,
   getCompany,
   getLatestActionPlan,
   getSubmissionCount,
@@ -106,10 +107,18 @@ export default async function PlansPage() {
           </div>
         ) : (
           <div className="flex flex-col gap-4 rounded-2xl border border-zinc-200 bg-white p-6 dark:border-zinc-800 dark:bg-zinc-950">
+            {/* Never a number the model will not actually see. getSubmissions()
+                caps the read at SUBMISSION_LIST_LIMIT — a deliberate prompt-token
+                budget, not an oversight — so past that the plan is built from the
+                newest 100 and a bare total would promise coverage the prompt does
+                not have. Same rule the submissions list states at
+                dashboard/submissions/page.tsx:82. */}
             <p className="text-sm text-zinc-600 dark:text-zinc-400">
               {submissionCount === 1
                 ? 'The plan will be generated from your 1 submission.'
-                : `The plan will be generated from your ${submissionCount} submissions.`}
+                : submissionCount > SUBMISSION_LIST_LIMIT
+                  ? `The plan will be generated from your most recent ${SUBMISSION_LIST_LIMIT} of ${submissionCount} submissions.`
+                  : `The plan will be generated from your ${submissionCount} submissions.`}
             </p>
 
             {submissionCount < THIN_PLAN_THRESHOLD && (

@@ -767,8 +767,8 @@ of the NFR, and the same conclusion `submission_intake` reached.
 
 #### Manual
 
-- [x] 3.5 A live call returns Polish output whose cited indexes are all in range
-- [x] 3.6 Generation completes inside the 60-second budget on ~30 submissions
+- [x] 3.5 A live call returns Polish output whose cited indexes are all in range — fb2a403
+- [x] 3.6 Generation completes inside the 60-second budget on ~30 submissions — fb2a403
 
 > 3.5 and 3.6 CONFIRMED during Phase 4's manual pass, as planned below — on
 > `nvidia/nemotron-3-super-120b-a12b:free`, not on the paid model the phase was
@@ -793,10 +793,10 @@ of the NFR, and the same conclusion `submission_intake` reached.
 
 #### Automated
 
-- [x] 4.1 Type checking passes: `npx tsc --noEmit`
-- [x] 4.2 Linting passes: `npm run lint`
-- [x] 4.3 Build succeeds: `npm run build`
-- [x] 4.4 Full suite green: `npm run test`
+- [x] 4.1 Type checking passes: `npx tsc --noEmit` — fb2a403
+- [x] 4.2 Linting passes: `npm run lint` — fb2a403
+- [x] 4.3 Build succeeds: `npm run build` — fb2a403
+- [x] 4.4 Full suite green: `npm run test` — fb2a403
 
 > 4.3 CLOSES PHASE 3's OPEN ITEM. The build now lists `/dashboard/plans` as a
 > route, so `src/app/dashboard/plans/actions.ts` is compiled for the first time
@@ -842,11 +842,11 @@ of the NFR, and the same conclusion `submission_intake` reached.
 > reads as actionable advice, not a restatement") is a judgement on model
 > quality, and passing it on a free model would not be evidence for what ships.
 
-- [x] 4.5 Zero submissions: action unavailable with an explanation
-- [x] 4.6 One to four submissions: warning shown, generation still works
-- [x] 4.7 Progress visible continuously from press to result
-- [x] 4.8 Discard writes nothing — plan count unchanged
-- [x] 4.9 Save redirects to the saved plan and it survives a refresh
+- [x] 4.5 Zero submissions: action unavailable with an explanation — fb2a403
+- [x] 4.6 One to four submissions: warning shown, generation still works — fb2a403
+- [x] 4.7 Progress visible continuously from press to result — fb2a403
+- [x] 4.8 Discard writes nothing — plan count unchanged — fb2a403
+- [x] 4.9 Save redirects to the saved plan and it survives a refresh — fb2a403
 
 > 4.9 VERIFIED UP TO THE REDIRECT ONLY. `savePlan()` writes the plan and
 > redirects to `/dashboard/plans/<planId>`, which is the whole of this phase's
@@ -859,14 +859,84 @@ of the NFR, and the same conclusion `submission_intake` reached.
 
 #### Automated
 
-- [ ] 5.1 Type checking passes: `npx tsc --noEmit`
-- [ ] 5.2 Linting passes: `npm run lint`
-- [ ] 5.3 Build succeeds: `npm run build`
-- [ ] 5.4 Full suite green: `npm run test` and `npm run test:remote`
+- [x] 5.1 Type checking passes: `npx tsc --noEmit`
+- [x] 5.2 Linting passes: `npm run lint`
+- [x] 5.3 Build succeeds: `npm run build`
+- [x] 5.4 Full suite green: `npm run test` and `npm run test:remote`
+
+> 5.3 lists `/dashboard/plans/[planId]` as a route, which is what closes 4.9's
+> open half: savePlan()'s redirect target now exists, so "survives a refresh"
+> becomes observable at 5.5 rather than landing on a 404.
+
+> 5.4 TICKED ON SUBSTANCE FOR `npm run test`, NOT ON EXIT CODE — the 2.2 reason
+> and only that reason. `.env.local` points at the hosted project, so
+> `require-local-db.ts` refuses the same three DB-touching suites. Non-DB tests:
+> 83 passed, unchanged from Phases 3 and 4, which is correct — this phase adds a
+> DAL read and a page, and the plan gives it no new test file. `npm run
+> test:remote` is green end to end: 154 passed, 7 files, the same counts as
+> after Phase 4.
+
+> `getActionPlan()` sorts problems by `rank` and actions by `position` in JS
+> rather than through PostgREST `order` parameters, which the plan's "single
+> embedded select" phrasing left open. Embedded ordering is spelled per nesting
+> level and does not carry identically to the second level (plan_actions and
+> plan_problem_submissions sit under plan_problems); both collections are
+> bounded at 8 and 5 elements by plan-schema.ts, so one mechanism that works at
+> every depth beats two that differ. Still one round trip, which was the point
+> of the contract.
+
+> SCOPE ADDED ON PURPOSE: a "View your saved plan" link on /dashboard/plans,
+> backed by `getLatestActionPlan()` in the DAL. The plan gives Phase 5 the
+> `[planId]` page and nothing else, which left savePlan()'s one-time redirect as
+> the ONLY route to a saved plan — an owner who navigated away had to have
+> caught the URL mid-redirect. That does not satisfy the FR-012 criterion the
+> phase exists for ("zapisać i ODNALEŹĆ PÓŹNIEJ na koncie"), so 5.5 would have
+> been ticked on a technicality.
+>
+> Sized to stay out of S-04's way: the LATEST plan only, one row, no list, no
+> edit, no delete. FR-013's real list page still belongs to S-04 and replaces
+> this link rather than building on it.
+>
+> Two details the addition carried with it. The link renders OUTSIDE the
+> submission-count branches, because a saved plan outlives the submissions it
+> came from (FR-009) and an owner at zero submissions can still have one to
+> return to. And `savePlan()` now revalidates `/dashboard/plans` alongside
+> `/dashboard` — revalidatePath does not cascade to nested routes, so without it
+> the client router can serve a cached payload still pointing at the previous
+> plan.
+
+> GENERATION BUDGET RAISED 60s → 120s, by operator decision during this phase's
+> manual pass. The plan names 60 seconds in Phase 3's contract, in Performance
+> Considerations and in 3.6; that number is superseded, and the phase blocks are
+> left as written because they record what was planned. What actually changed:
+> `PLAN_GENERATION_TIMEOUT_MS` in `src/app/dashboard/plans/actions.ts`, and
+> `PROGRESS_STAGE_MS` in `plan-generator.tsx` from 8s to 20s so the five stages
+> still cover most of the budget instead of running out in its first third. The
+> "under a minute" line under the progress bar now says two minutes.
+>
+> The reasoning the plan gave for 60s survives the change and is what bounds it:
+> the abort must fire in this app so a slow model surfaces as
+> PLAN_GENERATION_TIMED_OUT rather than as the Vercel platform error
+> `infrastructure.md` names as its top risk. 120s keeps a wide margin under the
+> 300s function default; past ~240s that ordering would invert.
+>
+> 3.6 stays ticked. It asserted a real observation at the time it was made —
+> generation completed inside 60s on ~30 submissions — and a wider budget does
+> not falsify it. 5.7 and 5.8 now run under the new number.
+
+> The saved page renders the stored `rank`, not the array index, where the
+> review screen renders the array position. They are the same number by
+> construction — save_action_plan() assigns rank from the array position — but
+> after the save the database is the authority, and reading the index back would
+> silently re-number a plan if a row ever went missing.
 
 #### Manual
 
-- [ ] 5.5 Saved plan reachable at its URL after reload and re-login
-- [ ] 5.6 A second owner cannot see that URL
-- [ ] 5.7 Live run: every cited submission is one the owner actually has
-- [ ] 5.8 The plan reads as actionable advice, not a restatement of submissions
+- [x] 5.5 Saved plan reachable at its URL after reload and re-login
+- [x] 5.6 A second owner cannot see that URL
+- [x] 5.7 Live run: every cited submission is one the owner actually has
+- [x] 5.8 The plan reads as actionable advice, not a restatement of submissions
+
+> 5.5 ALSO CLOSES 4.9's open half. That row was verified up to the redirect
+> only, because its target route did not exist yet; the plan split one
+> user-visible outcome across two phases, and this is the second half.

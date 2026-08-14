@@ -28,11 +28,16 @@ const PROGRESS_STAGES = [
 ] as const
 
 /**
- * How long each stage is shown. Five stages at 8s covers 40s of the 60s budget
- * and the last one then holds — deliberately, because a stage list that runs
- * out and resets would tell the owner the work restarted.
+ * How long each stage is shown. Five stages at 20s covers 100s of the 120s
+ * budget in actions.ts and the last one then holds — deliberately, because a
+ * stage list that runs out and resets would tell the owner the work restarted.
+ *
+ * Paced against PLAN_GENERATION_TIMEOUT_MS rather than picked: at the old 8s
+ * the list would finish inside the first 40 seconds of a two-minute budget and
+ * spend the remaining 80 sitting on "checking every problem", which is the
+ * hung-looking silence the staging exists to avoid.
  */
-const PROGRESS_STAGE_MS = 8_000
+const PROGRESS_STAGE_MS = 20_000
 
 /**
  * The generate → review → save/discard surface (US-01, FR-011, FR-012).
@@ -145,7 +150,7 @@ function GenerationProgress({ stage }: { stage: number }) {
         {PROGRESS_STAGES[stage]}
       </p>
       <p className="text-xs text-zinc-500 dark:text-zinc-500">
-        This usually takes under a minute. Keep this page open.
+        This can take up to two minutes. Keep this page open.
       </p>
     </div>
   )

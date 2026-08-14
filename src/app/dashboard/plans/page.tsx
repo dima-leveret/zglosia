@@ -1,9 +1,24 @@
 import Link from 'next/link'
 
-import { getCompany, getSubmissionCount } from '@/lib/dal'
+import {
+  getCompany,
+  getLatestActionPlan,
+  getSubmissionCount,
+} from '@/lib/dal'
 import { isCompanyProfileComplete } from '@/lib/validation'
 
 import { PlanGenerator } from './plan-generator'
+
+/**
+ * Fixed locale, formatted on the server, same as every other date in the app —
+ * the ambient locale would render one string on the server and another after
+ * hydration.
+ */
+const dateFormatter = new Intl.DateTimeFormat('en-GB', {
+  day: 'numeric',
+  month: 'short',
+  year: 'numeric',
+})
 
 /**
  * Below this many submissions the plan is generated anyway, but the owner is
@@ -30,10 +45,11 @@ const THIN_PLAN_THRESHOLD = 5
  */
 export default async function PlansPage() {
   // Independent reads, so they overlap rather than queue. verifySession is
-  // cache()d, so the two getUser() calls dedupe to one round trip.
-  const [company, submissionCount] = await Promise.all([
+  // cache()d, so the three getUser() calls dedupe to one round trip.
+  const [company, submissionCount, latestPlan] = await Promise.all([
     getCompany(),
     getSubmissionCount(),
+    getLatestActionPlan(),
   ])
 
   const profileComplete = isCompanyProfileComplete(company)
@@ -133,6 +149,29 @@ export default async function PlansPage() {
 
             <PlanGenerator />
           </div>
+        )}
+
+        {/* The way back to a plan already saved (FR-012 — "zapisać i odnaleźć
+            później"). savePlan() redirects here once and never again, so
+            without this the only route to a saved plan is a URL the owner had
+            to catch mid-redirect.
+
+            The LATEST one, not a list: FR-013 is S-04, and this is one row
+            rather than a surface that slice would have to replace.
+
+            Rendered outside the submission-count branches on purpose — a saved
+            plan outlives the submissions it was generated from (FR-009 lets the
+            owner delete them), so an owner at zero submissions can still have a
+            plan to come back to, and that is exactly when a dead end would be
+            most confusing. */}
+        {company && latestPlan && (
+          <Link
+            href={`/dashboard/plans/${latestPlan.id}`}
+            className="flex h-11 w-full items-center justify-center rounded-full border border-zinc-300 px-5 text-sm font-medium transition-colors hover:bg-black/[.04] dark:border-zinc-700 dark:hover:bg-white/[.06]"
+          >
+            View your saved plan from{' '}
+            {dateFormatter.format(new Date(latestPlan.created_at))}
+          </Link>
         )}
       </div>
     </main>

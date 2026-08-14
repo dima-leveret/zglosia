@@ -26,12 +26,23 @@ import {
 /**
  * How long the model gets before the request is abandoned.
  *
- * 60s sits well inside Vercel's 300s function default, which is the point: the
- * timeout surfaces as this app's own message rather than as a platform error
- * page. `context/foundation/infrastructure.md` names that platform error as its
- * top-likelihood risk for this slice.
+ * 120s, raised from the 60s the plan specified: a plan over a realistic set of
+ * submissions is several thousand output tokens of reasoning, and a model that
+ * is merely slow was being cut off and reported as a failure the owner could do
+ * nothing about. The retry it prompted cost another ledger slot for the same
+ * work.
+ *
+ * It still sits well inside Vercel's 300s function default, which is the
+ * constraint that actually bounds this number: the timeout has to fire here so
+ * it surfaces as this app's own message rather than as a platform error page.
+ * `context/foundation/infrastructure.md` names that platform error as its
+ * top-likelihood risk for this slice. Raise this past ~240s and that ordering
+ * inverts.
+ *
+ * PROGRESS_STAGE_MS in plan-generator.tsx is paced against this budget — move
+ * one and the stage list either runs out early or never reaches its last entry.
  */
-const PLAN_GENERATION_TIMEOUT_MS = 60_000
+const PLAN_GENERATION_TIMEOUT_MS = 120_000
 
 /**
  * What the generate button gets back. Exactly one of `plan` or `message` is
@@ -374,9 +385,15 @@ export async function savePlan(
     return { message: PLAN_SAVE_FAILED }
   }
 
-  // The dashboard renders counts that this write changes. Revalidate BEFORE
-  // redirecting: redirect() throws, so nothing after it runs.
+  // The dashboard renders counts that this write changes, and /dashboard/plans
+  // now renders a link to the newest saved plan — which this write is. Both
+  // paths are listed explicitly because revalidatePath does not cascade to
+  // nested routes; without the second one the client router can serve a cached
+  // payload pointing at the previous plan.
+  //
+  // Revalidate BEFORE redirecting: redirect() throws, so nothing after it runs.
   revalidatePath('/dashboard')
+  revalidatePath('/dashboard/plans')
 
   redirect(`/dashboard/plans/${planId}`)
 }

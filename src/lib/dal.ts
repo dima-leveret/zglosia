@@ -109,6 +109,157 @@ export const getSubmissions = cache(async () => {
 })
 
 /**
+ * One saved plan as its page renders it (S-03, FR-012).
+ *
+ * Every field type is derived from the generated schema rather than
+ * hand-written, for the reason SubmissionListRow documents: dropping a column
+ * from the select below then becomes a type error in the page instead of an
+ * undefined at runtime.
+ */
+export type ActionPlanCitation = Pick<
+  Database['public']['Tables']['submissions']['Row'],
+  'id' | 'content'
+>
+
+export type ActionPlanAction = Pick<
+  Database['public']['Tables']['plan_actions']['Row'],
+  'id' | 'content'
+>
+
+export type ActionPlanProblem = Pick<
+  Database['public']['Tables']['plan_problems']['Row'],
+  'id' | 'rank' | 'title' | 'rationale'
+> & {
+  actions: ActionPlanAction[]
+  /**
+   * The submissions this problem was drawn from — the anti-hallucination NFR
+   * made visible. Can legitimately be empty: citations cascade away when the
+   * owner deletes a cited submission (FR-009), and the plan records what was
+   * true when it was generated.
+   */
+  citations: ActionPlanCitation[]
+}
+
+export type ActionPlanDetail = Pick<
+  Database['public']['Tables']['action_plans']['Row'],
+  'id' | 'summary' | 'created_at'
+> & { problems: ActionPlanProblem[] }
+
+/**
+ * One saved plan with its problems, their steps and the submissions behind
+ * them. Returns null when the id names no plan the caller may read.
+ *
+ * Same filter-free read convention as getCompany and getSubmissions: there is
+ * no company filter here, because RLS scopes all four tables to
+ * current_company_id() — action_plans on the column directly, the other three
+ * through an EXISTS up the parent chain. `.eq('id', ...)` is a row selector,
+ * not a tenant filter: another owner's plan id matches the predicate and is
+ * still returned as zero rows, which is why the caller cannot tell "does not
+ * exist" from "not yours" and must not try.
+ *
+ * ONE round trip, not four. The embedded select walks
+ * action_plans → plan_problems → {plan_actions, plan_problem_submissions →
+ * submissions}, so a plan with eight problems is still a single request rather
+ * than an N+1 across the chain.
+ *
+ * Ordering is applied here in JS rather than as PostgREST `order` parameters.
+ * `rank` and `position` are unique per parent and both collections are tiny
+ * (at most 8 problems, 5 actions), so the sort costs nothing — and one
+ * mechanism that works identically at every nesting depth beats two that
+ * differ at the second level.
+ */
+export const getActionPlan = cache(
+  async (planId: string): Promise<ActionPlanDetail | null> => {
+    await verifySession()
+
+    const supabase = await createClient()
+    const { data, error } = await supabase
+      .from('action_plans')
+      .select(
+        `id, summary, created_at,
+         plan_problems (
+           id, rank, title, rationale,
+           plan_actions ( id, position, content ),
+           plan_problem_submissions ( submissions ( id, content ) )
+         )`
+      )
+      .eq('id', planId)
+      .maybeSingle()
+
+    if (error) {
+      throw error
+    }
+
+    if (!data) {
+      return null
+    }
+
+    return {
+      id: data.id,
+      summary: data.summary,
+      created_at: data.created_at,
+      problems: [...data.plan_problems]
+        .sort((a, b) => a.rank - b.rank)
+        .map((problem) => ({
+          id: problem.id,
+          rank: problem.rank,
+          title: problem.title,
+          rationale: problem.rationale,
+          actions: [...problem.plan_actions]
+            .sort((a, b) => a.position - b.position)
+            .map((action) => ({ id: action.id, content: action.content })),
+          citations: problem.plan_problem_submissions
+            .map((citation) => citation.submissions)
+            // A citation row cannot outlive its submission — the FK cascades —
+            // so this filter is about the join's TYPE, which is nullable
+            // because PostgREST cannot know the FK is NOT NULL, not about a
+            // row shape that occurs in practice.
+            .filter((submission) => submission !== null)
+            .map((submission) => ({
+              id: submission.id,
+              content: submission.content,
+            })),
+        })),
+    }
+  }
+)
+
+/**
+ * The newest saved plan's id and date, or null when the company has none.
+ *
+ * Deliberately the LATEST ONE, not a list. FR-013 (przeglądać zapisane plany)
+ * is S-04 and gets a real list page there; what this read exists for is the
+ * FR-012 acceptance criterion — "wygenerowany plan można zapisać i ODNALEŹĆ
+ * PÓŹNIEJ na koncie" — which a plan reachable only through savePlan()'s
+ * one-time redirect does not satisfy. A link the owner can come back to does,
+ * and it is one row rather than a surface S-04 would then have to replace.
+ *
+ * `limit(1)` with the same (created_at desc, id desc) order the list index
+ * carries, so this is an index-only walk to the first row.
+ */
+export const getLatestActionPlan = cache(async () => {
+  await verifySession()
+
+  const supabase = await createClient()
+  const { data, error } = await supabase
+    .from('action_plans')
+    .select('id, created_at')
+    .order('created_at', { ascending: false })
+    // Tiebreaker, not decoration: plans saved in the same statement share
+    // created_at, and this pair matches action_plans_company_created_idx
+    // exactly so the read stays an index scan.
+    .order('id', { ascending: false })
+    .limit(1)
+    .maybeSingle()
+
+  if (error) {
+    throw error
+  }
+
+  return data
+})
+
+/**
  * Just the total, for the dashboard. `head: true` sends no rows back — the
  * dashboard needs the number, not the content.
  */

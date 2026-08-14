@@ -659,10 +659,10 @@ of the NFR, and the same conclusion `submission_intake` reached.
 #### Automated
 
 - [ ] 1.1 Migration applies cleanly from empty: `supabase db reset`
-- [x] 1.2 Migration applied remotely: `supabase migration list --linked` shows a remote timestamp
-- [x] 1.3 Type checking passes: `npx tsc --noEmit`
-- [x] 1.4 Linting passes: `npm run lint`
-- [x] 1.5 Regenerated `database.types.ts` contains all five tables and `save_action_plan`
+- [x] 1.2 Migration applied remotely: `supabase migration list --linked` shows a remote timestamp — 47e4f01
+- [x] 1.3 Type checking passes: `npx tsc --noEmit` — 47e4f01
+- [x] 1.4 Linting passes: `npm run lint` — 47e4f01
+- [x] 1.5 Regenerated `database.types.ts` contains all five tables and `save_action_plan` — 47e4f01
 
 > 1.1 NOT RUN — no Docker runtime on this machine, so there is no local Supabase to
 > reset from empty. Deliberate operator decision at implementation time, not an
@@ -674,20 +674,38 @@ of the NFR, and the same conclusion `submission_intake` reached.
 
 #### Manual
 
-- [x] 1.6 Five tables visible in Supabase Studio with RLS enabled on each
-- [x] 1.7 `save_action_plan` appears under Database → Functions
+- [x] 1.6 Five tables visible in Supabase Studio with RLS enabled on each — 47e4f01
+- [x] 1.7 `save_action_plan` appears under Database → Functions — 47e4f01
 
 ### Phase 2: Database contract tests
 
 #### Automated
 
-- [ ] 2.1 Suite passes against a local database: `npm run test:remote`
+- [x] 2.1 Suite passes against a local database: `npm run test:remote`
 - [ ] 2.2 Full suite still green: `npm run test`
-- [ ] 2.3 Linting passes: `npm run lint`
+- [x] 2.3 Linting passes: `npm run lint`
+
+> 2.2 NOT TICKABLE ON THIS MACHINE — same root cause as 1.1. `.env.local` points
+> at the hosted project, so `tests/support/require-local-db.ts` refuses the three
+> DB-touching suites and the run exits non-zero. That is the guard working, not a
+> regression: the count went 2 → 3 purely because `tests/plans.test.ts` joins the
+> guarded set, and all 61 non-DB tests pass exactly as they did before this phase.
+> `npm run test:remote` (2.1) is the run that actually exercises them: 132 passed,
+> 6 files. Tick 2.2 once a local Supabase exists.
+
+> Phase 2 found a Phase 1 defect, which is what it was for. `anon` held EXECUTE on
+> `save_action_plan` despite the migration's `revoke ... from public`: Supabase's
+> default privileges grant EXECUTE on new functions directly to the named role, and
+> revoking from the PUBLIC pseudo-role does not touch that. Anon reached the
+> function body and was stopped only by its null-company check. Closed by
+> `supabase/migrations/20260814134807_harden_plan_rpc_grants.sql`, applied remotely
+> (`supabase migration list --linked`), and pinned by an assertion on the error
+> MESSAGE — both refusals report 42501, so only the text separates "may not call
+> it" from "called it and it raised".
 
 #### Manual
 
-- [ ] 2.4 Each denial asserts a specific SQLSTATE, not an empty array
+- [x] 2.4 Each denial asserts a specific SQLSTATE, not an empty array
 
 ### Phase 3: Generation path
 

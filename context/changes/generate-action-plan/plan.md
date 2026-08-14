@@ -859,10 +859,10 @@ of the NFR, and the same conclusion `submission_intake` reached.
 
 #### Automated
 
-- [x] 5.1 Type checking passes: `npx tsc --noEmit`
-- [x] 5.2 Linting passes: `npm run lint`
-- [x] 5.3 Build succeeds: `npm run build`
-- [x] 5.4 Full suite green: `npm run test` and `npm run test:remote`
+- [x] 5.1 Type checking passes: `npx tsc --noEmit` — 1a5c85b
+- [x] 5.2 Linting passes: `npm run lint` — 1a5c85b
+- [x] 5.3 Build succeeds: `npm run build` — 1a5c85b
+- [x] 5.4 Full suite green: `npm run test` and `npm run test:remote` — 1a5c85b
 
 > 5.3 lists `/dashboard/plans/[planId]` as a route, which is what closes 4.9's
 > open half: savePlan()'s redirect target now exists, so "survives a refresh"
@@ -932,10 +932,10 @@ of the NFR, and the same conclusion `submission_intake` reached.
 
 #### Manual
 
-- [x] 5.5 Saved plan reachable at its URL after reload and re-login
-- [x] 5.6 A second owner cannot see that URL
-- [x] 5.7 Live run: every cited submission is one the owner actually has
-- [x] 5.8 The plan reads as actionable advice, not a restatement of submissions
+- [x] 5.5 Saved plan reachable at its URL after reload and re-login — 1a5c85b
+- [x] 5.6 A second owner cannot see that URL — 1a5c85b
+- [x] 5.7 Live run: every cited submission is one the owner actually has — 1a5c85b
+- [x] 5.8 The plan reads as actionable advice, not a restatement of submissions — 1a5c85b
 
 > 5.5 ALSO CLOSES 4.9's open half. That row was verified up to the redirect
 > only, because its target route did not exist yet; the plan split one

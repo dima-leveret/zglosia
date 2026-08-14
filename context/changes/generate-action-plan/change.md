@@ -1,7 +1,7 @@
 ---
 change_id: generate-action-plan
 title: Generowanie i zapis planu działań ze zgłoszeń (north star)
-status: implementing
+status: implemented
 created: 2026-08-14
 updated: 2026-08-14
 archived_at: null

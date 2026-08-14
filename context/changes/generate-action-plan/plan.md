@@ -681,9 +681,9 @@ of the NFR, and the same conclusion `submission_intake` reached.
 
 #### Automated
 
-- [x] 2.1 Suite passes against a local database: `npm run test:remote`
+- [x] 2.1 Suite passes against a local database: `npm run test:remote` — 917a557
 - [ ] 2.2 Full suite still green: `npm run test`
-- [x] 2.3 Linting passes: `npm run lint`
+- [x] 2.3 Linting passes: `npm run lint` — 917a557
 
 > 2.2 NOT TICKABLE ON THIS MACHINE — same root cause as 1.1. `.env.local` points
 > at the hosted project, so `tests/support/require-local-db.ts` refuses the three
@@ -705,21 +705,80 @@ of the NFR, and the same conclusion `submission_intake` reached.
 
 #### Manual
 
-- [x] 2.4 Each denial asserts a specific SQLSTATE, not an empty array
+- [x] 2.4 Each denial asserts a specific SQLSTATE, not an empty array — 917a557
 
 ### Phase 3: Generation path
 
 #### Automated
 
-- [ ] 3.1 Generation tests pass: `npm run test`
-- [ ] 3.2 Type checking passes: `npx tsc --noEmit`
-- [ ] 3.3 Linting passes: `npm run lint`
-- [ ] 3.4 Secrets absent from git: `git check-ignore .env.local`
+- [x] 3.1 Generation tests pass: `npm run test`
+- [x] 3.2 Type checking passes: `npx tsc --noEmit`
+- [x] 3.3 Linting passes: `npm run lint`
+- [x] 3.4 Secrets absent from git: `git check-ignore .env.local`
+
+> 3.1 TICKED ON SUBSTANCE, NOT ON EXIT CODE. `tests/plan-generation.test.ts`
+> passes 22/22 under both runners. `npm run test` itself still exits non-zero
+> for the 2.2 reason and only that reason — `.env.local` points at the hosted
+> project, so `require-local-db.ts` refuses the three DB-touching suites. The
+> non-DB count went 61 → 83, which is this phase's 22 tests exactly.
+> `npm run test:remote` is green end to end: 154 passed, 7 files.
+
+> Deviation from the plan's stated version, deliberate. The plan was written
+> against AI SDK v6; `npm i ai` resolves to 7.0.65, which is also what
+> `@openrouter/ai-sdk-provider@3` declares as its peer. Every contract the plan
+> named survives the bump and was verified in the installed sources: the API is
+> still `generateText({ output: Output.object({ schema }) })`, the result
+> property is still `result.output` (v7 `dist/index.d.ts:4356`), and
+> `Output.object` still throws `NoObjectGeneratedError` on a parse or schema
+> mismatch. One thing v7 adds that the plan did not anticipate: `.output` is a
+> getter that throws `NoOutputGeneratedError` when the model stopped for any
+> reason other than `stop` (token limit, most often), so it is read inside the
+> try rather than after it.
+
+> `structuredOutputs: { strict: false }` on the model, which the plan did not
+> specify. The provider defaults `response_format.json_schema.strict` to true,
+> and strict mode rejects several keywords Zod emits for the plan's own bounds
+> (`maxLength`, `maxItems`) on some upstream providers — a hard 400 rather than
+> a weaker plan. The bounds are not lost: the SDK validates the parsed response
+> against the same Zod schema regardless, and a violation arrives as
+> `NoObjectGeneratedError`.
+
+> `maxRetries: 0`, from the plan's own "no automatic retry, no backoff, no
+> queue". Left at the SDK default of 2 it would spend most of the 60-second
+> budget re-calling a provider that is already failing, against a ledger slot
+> that is already gone.
+
+> `generatePlan()` takes no parameters. `useActionState` calls it with
+> (prevState, formData) and both are ignored, so declaring them would be two
+> unused-argument lint warnings for a signature that reads nothing — the company
+> comes from the session, the submissions from the DAL under RLS. Behaviourally
+> identical to the plan's `generatePlan(prevState, formData)`.
+
+> `GenerateState` carries `citedSubmissions` (id → content) alongside `plan`,
+> which the plan's Phase 3 contract did not name. The review screen in Phase 4
+> shows every citation verbatim, and this action is the one place already
+> holding both halves; without it Phase 4 re-reads submissions to display words
+> it was just handed.
+
+> `npm run build` succeeds, but it does NOT yet compile
+> `src/app/dashboard/plans/actions.ts` — there is no page under that route until
+> Phase 4, and Next only builds reachable route modules. The `export type
+> GenerateState` from a `'use server'` module is therefore unproven until 4.3.
 
 #### Manual
 
 - [ ] 3.5 A live call returns Polish output whose cited indexes are all in range
 - [ ] 3.6 Generation completes inside the 60-second budget on ~30 submissions
+
+> 3.5 and 3.6 DEFERRED TO PHASE 4's MANUAL PASS, by operator decision. Both need
+> a live model call, and at the end of this phase there is no way to make one
+> through the app: the button, the plans page and the review screen are all
+> Phase 4. Exercising them now would mean writing a throwaway harness that calls
+> generatePlan() directly — a second call path, verified once, then deleted.
+> `OPENROUTER_API_KEY` is also still blank in `.env.local` (the var was added
+> here with an empty value; `ZGLOSIA_PLAN_MODEL` is set to
+> `anthropic/claude-sonnet-4.5`). Tick both during 4.5–4.9, when pressing the
+> real button is the cheaper and more honest test.
 
 ### Phase 4: Review & save UI
 

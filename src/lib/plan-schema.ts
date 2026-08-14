@@ -125,6 +125,46 @@ export type VerifiedPlan = {
 }
 
 /**
+ * The same plan as it comes BACK over the wire, when the owner presses Save.
+ *
+ * The plan travels twice — out to the review screen, then back to savePlan —
+ * and this schema is what makes that round trip safe to parse rather than safe
+ * to trust. It checks STRUCTURE and BOUNDS only. It deliberately does not, and
+ * could not, check grounding: `submissionIds` is validated as uuid-shaped and
+ * nothing more, because whether a uuid names a submission of the caller's own
+ * company is a question only the database can answer. `save_action_plan()`
+ * answers it inside the transaction and aborts on any id that does not resolve.
+ *
+ * Typed as `z.ZodType<VerifiedPlan>` rather than left to inference: that
+ * annotation is a compile-time check that the wire shape and the in-memory
+ * shape cannot drift apart, and it is also what lets the save path hand
+ * `parsed.data.problems` straight to the RPC's jsonb argument.
+ */
+export const VerifiedPlanSchema: z.ZodType<VerifiedPlan> = z.object({
+  summary: modelText(PLAN_SUMMARY_MAX),
+  problems: z
+    .array(
+      z.object({
+        title: modelText(PROBLEM_TITLE_MAX),
+        rationale: modelText(PROBLEM_RATIONALE_MAX),
+        // Bounded by the same citation cap the model works under. A payload
+        // carrying 500 ids for one problem is not a plan this app produced, and
+        // the RPC would loop over every one of them before refusing.
+        submissionIds: z
+          .array(z.uuid())
+          .min(PROBLEM_CITATIONS_MIN)
+          .max(PROBLEM_CITATIONS_MAX),
+        actions: z
+          .array(modelText(ACTION_CONTENT_MAX))
+          .min(PROBLEM_ACTIONS_MIN)
+          .max(PROBLEM_ACTIONS_MAX),
+      })
+    )
+    .min(PLAN_PROBLEMS_MIN)
+    .max(PLAN_PROBLEMS_MAX),
+})
+
+/**
  * What resolveCitations() found. The drop lists exist so the caller can log
  * what the model got wrong — silently discarding a hallucinated citation and
  * saying nothing is how a model that has started inventing evidence stays

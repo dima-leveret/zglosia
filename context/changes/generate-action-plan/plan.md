@@ -711,10 +711,10 @@ of the NFR, and the same conclusion `submission_intake` reached.
 
 #### Automated
 
-- [x] 3.1 Generation tests pass: `npm run test`
-- [x] 3.2 Type checking passes: `npx tsc --noEmit`
-- [x] 3.3 Linting passes: `npm run lint`
-- [x] 3.4 Secrets absent from git: `git check-ignore .env.local`
+- [x] 3.1 Generation tests pass: `npm run test` — 6151525
+- [x] 3.2 Type checking passes: `npx tsc --noEmit` — 6151525
+- [x] 3.3 Linting passes: `npm run lint` — 6151525
+- [x] 3.4 Secrets absent from git: `git check-ignore .env.local` — 6151525
 
 > 3.1 TICKED ON SUBSTANCE, NOT ON EXIT CODE. `tests/plan-generation.test.ts`
 > passes 22/22 under both runners. `npm run test` itself still exits non-zero
@@ -767,9 +767,18 @@ of the NFR, and the same conclusion `submission_intake` reached.
 
 #### Manual
 
-- [ ] 3.5 A live call returns Polish output whose cited indexes are all in range
-- [ ] 3.6 Generation completes inside the 60-second budget on ~30 submissions
+- [x] 3.5 A live call returns Polish output whose cited indexes are all in range
+- [x] 3.6 Generation completes inside the 60-second budget on ~30 submissions
 
+> 3.5 and 3.6 CONFIRMED during Phase 4's manual pass, as planned below — on
+> `nvidia/nemotron-3-super-120b-a12b:free`, not on the paid model the phase was
+> written against (see the swap note under Phase 4). What they prove is that
+> the generation path works end to end: Polish output, every cited index in
+> range, inside the 60-second budget. What they do NOT prove is the output
+> quality of whatever model ships, which is Phase 5's 5.8.
+>
+> Original deferral note follows.
+>
 > 3.5 and 3.6 DEFERRED TO PHASE 4's MANUAL PASS, by operator decision. Both need
 > a live model call, and at the end of this phase there is no way to make one
 > through the app: the button, the plans page and the review screen are all
@@ -784,18 +793,67 @@ of the NFR, and the same conclusion `submission_intake` reached.
 
 #### Automated
 
-- [ ] 4.1 Type checking passes: `npx tsc --noEmit`
-- [ ] 4.2 Linting passes: `npm run lint`
-- [ ] 4.3 Build succeeds: `npm run build`
-- [ ] 4.4 Full suite green: `npm run test`
+- [x] 4.1 Type checking passes: `npx tsc --noEmit`
+- [x] 4.2 Linting passes: `npm run lint`
+- [x] 4.3 Build succeeds: `npm run build`
+- [x] 4.4 Full suite green: `npm run test`
+
+> 4.3 CLOSES PHASE 3's OPEN ITEM. The build now lists `/dashboard/plans` as a
+> route, so `src/app/dashboard/plans/actions.ts` is compiled for the first time
+> — the `export type GenerateState` from a `'use server'` module that Phase 3
+> recorded as unproven is proven here.
+
+> 4.4 TICKED ON SUBSTANCE, NOT ON EXIT CODE — the 2.2 reason and only that
+> reason. `.env.local` points at the hosted project, so `require-local-db.ts`
+> refuses the same three DB-touching suites. Non-DB tests: 83 passed, unchanged
+> from Phase 3, which is correct — this phase adds UI, and the plan gives it no
+> new test file. `npm run test:remote` is green end to end: 154 passed, 7 files,
+> the same counts as after Phase 3.
+
+> `savePlan` parses the posted plan with `VerifiedPlanSchema`, added to
+> `src/lib/plan-schema.ts` rather than to the `'use server'` module — the same
+> constraint messages.ts documents. It is annotated `z.ZodType<VerifiedPlan>`
+> so the wire shape and the in-memory shape cannot drift, and it checks
+> structure and bounds only: `submissionIds` is validated as uuid-shaped and no
+> further, because whether a uuid names a submission of the caller's own company
+> is a question only `save_action_plan()` can answer.
+
+> The stage-reset lives in the generate form's `onSubmit`, not in the effect the
+> plan's phrasing implies. `react-hooks/set-state-in-effect` rejects a
+> synchronous `setState` in an effect body, and starting a run is an event
+> anyway. The effect now owns only the interval.
 
 #### Manual
 
-- [ ] 4.5 Zero submissions: action unavailable with an explanation
-- [ ] 4.6 One to four submissions: warning shown, generation still works
-- [ ] 4.7 Progress visible continuously from press to result
-- [ ] 4.8 Discard writes nothing — plan count unchanged
-- [ ] 4.9 Save redirects to the saved plan and it survives a refresh
+> MODEL SWAPPED FOR THE MANUAL PASS, configuration only. The first live call
+> returned OpenRouter 402: the account balance affords ~2,666 tokens and
+> OpenRouter reserves credit against the model's FULL completion ceiling
+> (`anthropic/claude-sonnet-4.5` = 64,000 tokens ≈ $0.96), not against the
+> ~2–4k a real plan actually costs. `ZGLOSIA_PLAN_MODEL` is therefore
+> `nvidia/nemotron-3-super-120b-a12b:free` for 4.5–4.9 and for the deferred
+> 3.5/3.6. No code changed — the plan pinned the model in configuration
+> precisely so this is an env edit, and this is the first time that decision
+> paid for itself. The failure surfaced correctly as PLAN_GENERATION_FAILED
+> with the cause logged, and the ledger row was still consumed, which is the
+> designed behaviour: every attempt counts against the cap, including ones
+> that fail.
+>
+> Switch back to a paid model before Phase 5's acceptance run. 5.8 ("the plan
+> reads as actionable advice, not a restatement") is a judgement on model
+> quality, and passing it on a free model would not be evidence for what ships.
+
+- [x] 4.5 Zero submissions: action unavailable with an explanation
+- [x] 4.6 One to four submissions: warning shown, generation still works
+- [x] 4.7 Progress visible continuously from press to result
+- [x] 4.8 Discard writes nothing — plan count unchanged
+- [x] 4.9 Save redirects to the saved plan and it survives a refresh
+
+> 4.9 VERIFIED UP TO THE REDIRECT ONLY. `savePlan()` writes the plan and
+> redirects to `/dashboard/plans/<planId>`, which is the whole of this phase's
+> contract — but that route is Phase 5's deliverable, so today the redirect
+> lands on a 404 and "survives a refresh" cannot be observed yet. The plan
+> splits one user-visible outcome across two phases; the second half is 5.5,
+> and passing it re-verifies this row.
 
 ### Phase 5: Saved plan view & acceptance
 

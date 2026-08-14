@@ -82,6 +82,20 @@ export default async function DashboardPage() {
                 : "Complete your profile"}
             </Link>
 
+            {/* The north-star action (US-01), so it sits directly under the
+                count that decides what it can do. It is a link and never a
+                disabled control: at zero submissions the plans page itself
+                explains why generation is unavailable and points at the way
+                out, which is more use to the owner than a dead button. */}
+            <Link
+              href="/dashboard/plans"
+              className="flex h-11 w-full items-center justify-center rounded-full border border-zinc-300 px-5 text-sm font-medium transition-colors hover:bg-black/[.04] dark:border-zinc-700 dark:hover:bg-white/[.06]"
+            >
+              {submissionCount === 0
+                ? "Action plans"
+                : "Generate an action plan"}
+            </Link>
+
             <Link
               href="/dashboard/submissions"
               className="flex h-11 w-full items-center justify-center rounded-full border border-zinc-300 px-5 text-sm font-medium transition-colors hover:bg-black/[.04] dark:border-zinc-700 dark:hover:bg-white/[.06]"

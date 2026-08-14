@@ -2,11 +2,14 @@
 
 import { createOpenRouter } from '@openrouter/ai-sdk-provider'
 import { NoObjectGeneratedError, Output, generateText } from 'ai'
+import { revalidatePath } from 'next/cache'
+import { redirect } from 'next/navigation'
 
 import { getCompany, getSubmissions, verifySession } from '@/lib/dal'
 import { buildPlanPrompt } from '@/lib/plan-prompt'
 import {
   PlanOutputSchema,
+  VerifiedPlanSchema,
   resolveCitations,
   type VerifiedPlan,
 } from '@/lib/plan-schema'
@@ -17,6 +20,7 @@ import {
   PLAN_GENERATION_THROTTLED,
   PLAN_GENERATION_TIMED_OUT,
   PLAN_NO_SUBMISSIONS,
+  PLAN_SAVE_FAILED,
 } from './messages'
 
 /**
@@ -286,4 +290,93 @@ export async function generatePlan(): Promise<GenerateState> {
   // Nothing has been written to the plan tables. Saving is savePlan()'s job,
   // and the owner may well discard this instead.
   return { plan, citedSubmissions }
+}
+
+/**
+ * What the save button gets back. Only a failure ever reaches the component: a
+ * successful save redirects, and `redirect()` throws a control-flow exception,
+ * so there is no success message to render on this side.
+ */
+export type SaveState = { message?: string } | undefined
+
+/**
+ * Persists a reviewed plan on the caller's company account (FR-012).
+ *
+ * The plan arrives as JSON in the POST body — it has already been over the wire
+ * once — and this action re-derives every guarantee rather than trusting it.
+ * The company is read from the session inside Postgres by
+ * `save_action_plan()` (`current_company_id()`, never an argument), and every
+ * citation is re-checked there against that company's own submissions inside
+ * the transaction. So the round trip through the browser is NOT a trust
+ * boundary: a tampered payload can misspell a title, but it cannot attach a
+ * plan to another company, and it cannot cite a submission the owner does not
+ * have — that save aborts whole rather than saving a thinner plan.
+ *
+ * Zod's job here is narrower than it looks: reject a malformed body cleanly, so
+ * a broken payload is one logged failure rather than a 22P02 cast error
+ * surfacing out of PostgREST as if it were a user-facing problem.
+ */
+export async function savePlan(
+  _prevState: SaveState,
+  formData: FormData
+): Promise<SaveState> {
+  await verifySession()
+
+  const posted = formData.get('plan')
+
+  if (typeof posted !== 'string') {
+    console.error('savePlan: no plan in the request body')
+    return { message: PLAN_SAVE_FAILED }
+  }
+
+  let parsedJson: unknown
+
+  // JSON.parse throws on malformed input, and an uncaught throw in a Server
+  // Action becomes the dashboard error boundary — a whole-page failure for
+  // what is one bad request.
+  try {
+    parsedJson = JSON.parse(posted)
+  } catch {
+    console.error('savePlan: plan payload is not valid JSON')
+    return { message: PLAN_SAVE_FAILED }
+  }
+
+  const validatedPlan = VerifiedPlanSchema.safeParse(parsedJson)
+
+  if (!validatedPlan.success) {
+    console.error(
+      'savePlan: plan payload failed validation:',
+      validatedPlan.error.message
+    )
+    return { message: PLAN_SAVE_FAILED }
+  }
+
+  const supabase = await createClient()
+
+  // One RPC, one transaction. supabase-js has no transaction API, and this
+  // write spans four tables — a sequence of separate inserts would leave a plan
+  // header with no problems under it whenever one of them failed midway.
+  const { data: planId, error } = await supabase.rpc('save_action_plan', {
+    p_summary: validatedPlan.data.summary,
+    p_problems: validatedPlan.data.problems,
+  })
+
+  if (error) {
+    // Logged, never surfaced. The RPC's own message names how many citations
+    // failed to resolve and for which company — precisely what a tampered
+    // client would want to learn about which of its forged ids was rejected.
+    console.error('save_action_plan failed:', error.code, error.message)
+    return { message: PLAN_SAVE_FAILED }
+  }
+
+  if (!planId) {
+    console.error('save_action_plan returned no plan id')
+    return { message: PLAN_SAVE_FAILED }
+  }
+
+  // The dashboard renders counts that this write changes. Revalidate BEFORE
+  // redirecting: redirect() throws, so nothing after it runs.
+  revalidatePath('/dashboard')
+
+  redirect(`/dashboard/plans/${planId}`)
 }

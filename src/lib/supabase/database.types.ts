@@ -39,6 +39,35 @@ export type Database = {
   }
   public: {
     Tables: {
+      action_plans: {
+        Row: {
+          company_id: string
+          created_at: string
+          id: string
+          summary: string
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          id?: string
+          summary: string
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          id?: string
+          summary?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "action_plans_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       companies: {
         Row: {
           created_at: string
@@ -71,6 +100,123 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      plan_actions: {
+        Row: {
+          content: string
+          id: string
+          position: number
+          problem_id: string
+        }
+        Insert: {
+          content: string
+          id?: string
+          position: number
+          problem_id: string
+        }
+        Update: {
+          content?: string
+          id?: string
+          position?: number
+          problem_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "plan_actions_problem_id_fkey"
+            columns: ["problem_id"]
+            isOneToOne: false
+            referencedRelation: "plan_problems"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      plan_generations: {
+        Row: {
+          company_id: string
+          created_at: string
+          id: string
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          id?: string
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "plan_generations_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      plan_problem_submissions: {
+        Row: {
+          problem_id: string
+          submission_id: string
+        }
+        Insert: {
+          problem_id: string
+          submission_id: string
+        }
+        Update: {
+          problem_id?: string
+          submission_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "plan_problem_submissions_problem_id_fkey"
+            columns: ["problem_id"]
+            isOneToOne: false
+            referencedRelation: "plan_problems"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "plan_problem_submissions_submission_id_fkey"
+            columns: ["submission_id"]
+            isOneToOne: false
+            referencedRelation: "submissions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      plan_problems: {
+        Row: {
+          id: string
+          plan_id: string
+          rank: number
+          rationale: string
+          title: string
+        }
+        Insert: {
+          id?: string
+          plan_id: string
+          rank: number
+          rationale: string
+          title: string
+        }
+        Update: {
+          id?: string
+          plan_id?: string
+          rank?: number
+          rationale?: string
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "plan_problems_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "action_plans"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       submissions: {
         Row: {
@@ -115,6 +261,10 @@ export type Database = {
         Returns: {
           name: string
         }[]
+      }
+      save_action_plan: {
+        Args: { p_problems: Json; p_summary: string }
+        Returns: string
       }
     }
     Enums: {

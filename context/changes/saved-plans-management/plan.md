@@ -734,33 +734,33 @@ migration in the database.
 
 #### Automated
 
-- [x] 4.1 Type checking passes: `npx tsc --noEmit`
-- [x] 4.2 Linting passes: `npm run lint`
-- [x] 4.3 Build succeeds: `npm run build` — failed first with `next/headers` reaching the browser bundle: the editor is a CLIENT component and imports plan-schema.ts's bounds, and plan-schema.ts had a VALUE import of `SUBMISSION_LIST_LIMIT` from the `server-only` dal.ts. Fixed by moving both list caps to a pure `src/lib/list-limits.ts`; dal.ts, plan-schema.ts and the two pages now import from there
-- [x] 4.4 Edit-schema unit tests pass: `npm run test` — the pure suites pass (104 tests, incl. 63 across `plan-editing-schema` + `validation`). The four DB suites refuse to run under bare `npm run test` by design (`requireLocalDb`, no local Postgres on this machine); they pass under 4.5
-- [x] 4.5 Full suite passes: `npm run test:remote` — 9 files, 200 tests
+- [x] 4.1 Type checking passes: `npx tsc --noEmit` — b1f9534
+- [x] 4.2 Linting passes: `npm run lint` — b1f9534
+- [x] 4.3 Build succeeds: `npm run build` — failed first with `next/headers` reaching the browser bundle: the editor is a CLIENT component and imports plan-schema.ts's bounds, and plan-schema.ts had a VALUE import of `SUBMISSION_LIST_LIMIT` from the `server-only` dal.ts. Fixed by moving both list caps to a pure `src/lib/list-limits.ts`; dal.ts, plan-schema.ts and the two pages now import from there — b1f9534
+- [x] 4.4 Edit-schema unit tests pass: `npm run test` — the pure suites pass (104 tests, incl. 63 across `plan-editing-schema` + `validation`). The four DB suites refuse to run under bare `npm run test` by design (`requireLocalDb`, no local Postgres on this machine); they pass under 4.5 — b1f9534
+- [x] 4.5 Full suite passes: `npm run test:remote` — 9 files, 200 tests — b1f9534
 
 #### Manual
 
-- [x] 4.6 Editing summary and a problem title saves in place with a confirmation
-- [x] 4.7 Removing a middle problem leaves ranks contiguous from 1
-- [x] 4.8 Cancel after staging removals leaves the plan untouched on reload
-- [x] 4.9 Remove is unavailable on the last problem and the last action, with a visible reason
-- [x] 4.10 The original view shows the model's pre-edit wording and is unchanged after a second edit
-- [x] 4.11 Citations still render under each surviving problem after a text edit
-- [x] 4.12 Editing a plan deleted in another tab fails cleanly
+- [x] 4.6 Editing summary and a problem title saves in place with a confirmation — b1f9534
+- [x] 4.7 Removing a middle problem leaves ranks contiguous from 1 — b1f9534
+- [x] 4.8 Cancel after staging removals leaves the plan untouched on reload — b1f9534
+- [x] 4.9 Remove is unavailable on the last problem and the last action, with a visible reason — b1f9534
+- [x] 4.10 The original view shows the model's pre-edit wording and is unchanged after a second edit — b1f9534
+- [x] 4.11 Citations still render under each surviving problem after a text edit — b1f9534
+- [x] 4.12 Editing a plan deleted in another tab fails cleanly — b1f9534
 
 ### Phase 5: Acceptance
 
 #### Automated
 
-- [ ] 5.1 Full suite green from a clean checkout: `npm run test:remote`
-- [ ] 5.2 `npx supabase migration list --linked` shows every migration applied remotely
-- [ ] 5.3 Production build succeeds: `npm run build`
+- [x] 5.1 Full suite green from a clean checkout: `npm run test:remote` — 9 files, 200 tests passed
+- [x] 5.2 `npx supabase migration list --linked` shows every migration applied remotely — all 15 migrations carry a non-empty remote column, including this slice's `20260815160000`
+- [x] 5.3 Production build succeeds: `npm run build` — 12 routes, TypeScript clean
 
 #### Manual
 
-- [ ] 5.4 The full walkthrough completes without a dead end or an unexplained failure
-- [ ] 5.5 The edited plan reads as the owner's document while the original remains viewable
-- [ ] 5.6 A second account cannot reach or modify the first account's plans
-- [ ] 5.7 Deleting a plan does not affect submissions or other plans
+- [x] 5.4 The full walkthrough completes without a dead end or an unexplained failure
+- [x] 5.5 The edited plan reads as the owner's document while the original remains viewable
+- [x] 5.6 A second account cannot reach or modify the first account's plans
+- [x] 5.7 Deleting a plan does not affect submissions or other plans

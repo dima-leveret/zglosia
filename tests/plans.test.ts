@@ -57,7 +57,12 @@ const admin = createClient(url, serviceRoleKey, {
 /** 10 generations per company per day — enforce_plan_generation_rate(). */
 const PLAN_GENERATION_CAP = 10
 
-/** The four plan tables, all of which are read-only for `authenticated`. */
+/**
+ * The four plan tables. All four refuse INSERT and UPDATE from `authenticated`
+ * — every structural write goes through save_action_plan() or, since S-04,
+ * update_action_plan(). DELETE is the one exception: S-04 grants it on
+ * action_plans alone (see the child-table case below).
+ */
 const PLAN_TABLES = [
   'action_plans',
   'plan_problems',
@@ -479,11 +484,19 @@ describe('plan tables are read-only for authenticated', () => {
     }
   })
 
-  it('refuses a DELETE on every plan table', async () => {
-    // FR-014 (edit and delete saved plans) is S-04. Until that slice grants the
-    // verbs, their absence is a decision — this case is what keeps a future
-    // "just add delete" migration honest about crossing a slice boundary.
-    for (const table of PLAN_TABLES) {
+  it('refuses a DELETE on every plan CHILD table', async () => {
+    // action_plans left this set in S-04. FR-014 needs a whole-plan delete, and
+    // 20260815160000_saved_plans_management.sql grants it — a header delete
+    // cannot corrupt anything, because the children go with the S-03 cascades.
+    // Its scoping (an owner deletes their own; owner B's delete of owner A's
+    // plan matches zero rows) is asserted in tests/plan-editing.test.ts.
+    //
+    // The three CHILD tables keep denying, and that is the load-bearing half:
+    // a row-by-row delete would strip a plan past the floors
+    // update_action_plan() enforces and leave `rank`/`position` with gaps. This
+    // case is what keeps a future "just add delete" migration honest about
+    // crossing that line.
+    for (const table of PLAN_TABLES.filter((t) => t !== 'action_plans')) {
       const { error } = await ownerA.db
         .from(table)
         .delete()

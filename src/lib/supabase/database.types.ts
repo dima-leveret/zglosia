@@ -44,19 +44,25 @@ export type Database = {
           company_id: string
           created_at: string
           id: string
+          original_content: Json | null
           summary: string
+          updated_at: string
         }
         Insert: {
           company_id: string
           created_at?: string
           id?: string
+          original_content?: Json | null
           summary: string
+          updated_at?: string
         }
         Update: {
           company_id?: string
           created_at?: string
           id?: string
+          original_content?: Json | null
           summary?: string
+          updated_at?: string
         }
         Relationships: [
           {
@@ -265,6 +271,10 @@ export type Database = {
       save_action_plan: {
         Args: { p_problems: Json; p_summary: string }
         Returns: string
+      }
+      update_action_plan: {
+        Args: { p_plan_id: string; p_problems: Json; p_summary: string }
+        Returns: undefined
       }
     }
     Enums: {

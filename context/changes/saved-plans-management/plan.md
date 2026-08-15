@@ -754,13 +754,13 @@ migration in the database.
 
 #### Automated
 
-- [x] 5.1 Full suite green from a clean checkout: `npm run test:remote` — 9 files, 200 tests passed
-- [x] 5.2 `npx supabase migration list --linked` shows every migration applied remotely — all 15 migrations carry a non-empty remote column, including this slice's `20260815160000`
-- [x] 5.3 Production build succeeds: `npm run build` — 12 routes, TypeScript clean
+- [x] 5.1 Full suite green from a clean checkout: `npm run test:remote` — 9 files, 200 tests passed — 2b82570
+- [x] 5.2 `npx supabase migration list --linked` shows every migration applied remotely — all 15 migrations carry a non-empty remote column, including this slice's `20260815160000` — 2b82570
+- [x] 5.3 Production build succeeds: `npm run build` — 12 routes, TypeScript clean — 2b82570
 
 #### Manual
 
-- [x] 5.4 The full walkthrough completes without a dead end or an unexplained failure
-- [x] 5.5 The edited plan reads as the owner's document while the original remains viewable
-- [x] 5.6 A second account cannot reach or modify the first account's plans
-- [x] 5.7 Deleting a plan does not affect submissions or other plans
+- [x] 5.4 The full walkthrough completes without a dead end or an unexplained failure — 2b82570
+- [x] 5.5 The edited plan reads as the owner's document while the original remains viewable — 2b82570
+- [x] 5.6 A second account cannot reach or modify the first account's plans — 2b82570
+- [x] 5.7 Deleting a plan does not affect submissions or other plans — 2b82570

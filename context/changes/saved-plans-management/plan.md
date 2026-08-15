@@ -689,16 +689,16 @@ migration in the database.
 #### Automated
 
 - [ ] 1.1 Migration applies cleanly from empty: `npx supabase db reset` — BLOCKED, no container runtime on this machine (same as `submission-intake` 1.2 and `generate-action-plan` 1.1); `lessons.md` forbids ticking by inference. Compensating control: 1.2 plus the Phase 2 contract suite
-- [x] 1.2 Migration applied remotely: `npx supabase db push` + `npx supabase migration list --linked` shows a non-empty remote column
-- [x] 1.3 Regenerated `database.types.ts` contains `original_content`, `updated_at` and `update_action_plan`
-- [x] 1.4 Type checking passes: `npx tsc --noEmit`
-- [x] 1.5 Linting passes: `npm run lint`
-- [x] 1.6 Existing suites still pass: `npm run test:remote`
+- [x] 1.2 Migration applied remotely: `npx supabase db push` + `npx supabase migration list --linked` shows a non-empty remote column — 3300149
+- [x] 1.3 Regenerated `database.types.ts` contains `original_content`, `updated_at` and `update_action_plan` — 3300149
+- [x] 1.4 Type checking passes: `npx tsc --noEmit` — 3300149
+- [x] 1.5 Linting passes: `npm run lint` — 3300149
+- [x] 1.6 Existing suites still pass: `npm run test:remote` — 3300149
 
 #### Manual
 
-- [x] 1.7 The absence of an update grant and of any child-table delete grant is stated as a decision in the migration
-- [x] 1.8 `update_action_plan` with another company's plan id raises `42501` and changes nothing — verified against the **linked remote** project (no container runtime for `psql`, same constraint as 1.1), with two throwaway owner fixtures driven through an anon-key client carrying a real owner JWT. Owner B posted owner A's real problem/action ids with every string rewritten, one action dropped and one problem removed; got `42501 update_action_plan: plan <id> is not accessible to company <B>`, and A's header, problems, actions and citations came back byte-for-byte identical, `original_content` still `null` and `updated_at` unmoved — so the snapshot and the touch trigger did not fire either. A plan id that never existed raised the identical error (no oracle), and the positive control — owner A applying that same payload — succeeded, renumbered to `rank`/`position` 1 and wrote the snapshot. Fixture users deleted afterwards. Re-run as code in Phase 2's `tests/plan-editing.test.ts`
+- [x] 1.7 The absence of an update grant and of any child-table delete grant is stated as a decision in the migration — 3300149
+- [x] 1.8 `update_action_plan` with another company's plan id raises `42501` and changes nothing — verified against the **linked remote** project (no container runtime for `psql`, same constraint as 1.1), with two throwaway owner fixtures driven through an anon-key client carrying a real owner JWT. Owner B posted owner A's real problem/action ids with every string rewritten, one action dropped and one problem removed; got `42501 update_action_plan: plan <id> is not accessible to company <B>`, and A's header, problems, actions and citations came back byte-for-byte identical, `original_content` still `null` and `updated_at` unmoved — so the snapshot and the touch trigger did not fire either. A plan id that never existed raised the identical error (no oracle), and the positive control — owner A applying that same payload — succeeded, renumbered to `rank`/`position` 1 and wrote the snapshot. Fixture users deleted afterwards. Re-run as code in Phase 2's `tests/plan-editing.test.ts` — 3300149
 
 ### Phase 2: DB contract tests
 

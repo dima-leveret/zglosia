@@ -5,6 +5,13 @@ import { redirect } from 'next/navigation'
 
 import { createClient } from '@/lib/supabase/server'
 import type { Database } from '@/lib/supabase/database.types'
+// The two read caps live in a pure module rather than here: this one carries
+// `server-only`, and plan-schema.ts — which the client-side plan editor imports
+// its bounds from — needs SUBMISSION_LIST_LIMIT. See list-limits.ts.
+import {
+  ACTION_PLAN_LIST_LIMIT,
+  SUBMISSION_LIST_LIMIT,
+} from '@/lib/list-limits'
 
 /**
  * The single auth gate. Every owner-facing data request calls this first.
@@ -49,14 +56,6 @@ export const getCompany = cache(async () => {
 
   return data
 })
-
-/**
- * How many submissions one page render will show. The list is capped rather
- * than paginated: the owner's next action is "generate a plan from all of
- * these", not "page through them", so offset links would be scaffolding for a
- * workflow the product does not have.
- */
-export const SUBMISSION_LIST_LIMIT = 100
 
 /**
  * One row as the list renders it. Derived from the generated schema rather than
@@ -234,20 +233,6 @@ export const getActionPlan = cache(
     }
   }
 )
-
-/**
- * How many saved plans one page render will show (FR-013).
- *
- * Capped rather than paginated, for the same reason SUBMISSION_LIST_LIMIT
- * gives: the owner's next action on this list is "open one of these" or
- * "delete one of these", not "page through them", so offset links would be
- * scaffolding for a workflow the product does not have. The cap is far lower
- * than the submissions one and still generous — generation is throttled at 10
- * per company per day by enforce_plan_generation_rate(), and saving is a
- * deliberate second act after a review, so this list grows in ones, not in
- * hundreds.
- */
-export const ACTION_PLAN_LIST_LIMIT = 50
 
 /**
  * One saved plan as the index renders it.

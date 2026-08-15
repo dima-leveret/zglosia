@@ -1,12 +1,10 @@
 import Link from 'next/link'
 
+import { getActionPlans, getCompany, getSubmissionCount } from '@/lib/dal'
 import {
   ACTION_PLAN_LIST_LIMIT,
   SUBMISSION_LIST_LIMIT,
-  getActionPlans,
-  getCompany,
-  getSubmissionCount,
-} from '@/lib/dal'
+} from '@/lib/list-limits'
 import { isCompanyProfileComplete } from '@/lib/validation'
 
 import { PLAN_LIST_EMPTY } from './messages'

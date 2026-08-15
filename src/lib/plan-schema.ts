@@ -1,6 +1,6 @@
 import { z } from 'zod'
 
-import { SUBMISSION_LIST_LIMIT } from '@/lib/dal'
+import { SUBMISSION_LIST_LIMIT } from '@/lib/list-limits'
 
 /**
  * The shape the model must return, and the step that turns it into something
@@ -11,6 +11,12 @@ import { SUBMISSION_LIST_LIMIT } from '@/lib/dal'
  * the point: the citation-resolution step below is what carries the
  * anti-hallucination NFR on the application side, and a guarantee that can only
  * be exercised by paying a model is a guarantee nobody re-runs.
+ *
+ * Purity is also load-bearing at build time, not just at test time: the plan
+ * editor is a CLIENT component and reads its `maxLength` bounds from here, so a
+ * value import of anything `server-only` in this file chains next/headers into
+ * the browser bundle and fails the build. That is why the one cap this module
+ * borrows comes from list-limits.ts rather than from dal.ts.
  */
 
 /**
@@ -70,7 +76,7 @@ const modelText = (max: number) => z.string().trim().min(1).max(max)
  * also what an absent number coerces to.
  *
  * The upper bound is SUBMISSION_LIST_LIMIT because that is the largest list the
- * prompt can ever present (dal.ts caps the read at 100). It is a sanity bound
+ * prompt can ever present (getSubmissions caps the read at 100). It is a sanity bound
  * on the JSON Schema, not the real check — resolveCitations() below validates
  * against the actual list length, which is usually far smaller.
  */

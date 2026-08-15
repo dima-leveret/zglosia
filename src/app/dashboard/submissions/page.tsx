@@ -1,6 +1,7 @@
 import Link from 'next/link'
 
-import { SUBMISSION_LIST_LIMIT, getCompany, getSubmissions } from '@/lib/dal'
+import { getCompany, getSubmissions } from '@/lib/dal'
+import { SUBMISSION_LIST_LIMIT } from '@/lib/list-limits'
 
 import { SubmissionForm } from './submission-form'
 import { SubmissionList, type SubmissionListItem } from './submission-list'

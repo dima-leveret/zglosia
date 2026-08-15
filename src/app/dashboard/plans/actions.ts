@@ -9,6 +9,7 @@ import { z } from 'zod'
 import { getCompany, getSubmissions, verifySession } from '@/lib/dal'
 import { buildPlanPrompt } from '@/lib/plan-prompt'
 import {
+  PlanEditSchema,
   PlanOutputSchema,
   VerifiedPlanSchema,
   resolveCitations,
@@ -24,7 +25,9 @@ import {
   PLAN_GENERATION_THROTTLED,
   PLAN_GENERATION_TIMED_OUT,
   PLAN_NO_SUBMISSIONS,
+  PLAN_SAVED,
   PLAN_SAVE_FAILED,
+  PLAN_UPDATE_FAILED,
 } from './messages'
 
 /**
@@ -400,6 +403,117 @@ export async function savePlan(
   revalidatePath('/dashboard/plans')
 
   redirect(`/dashboard/plans/${planId}`)
+}
+
+/**
+ * What the edit form gets back. Unlike SaveState this DOES carry a success:
+ * updatePlan() stays on the page, so a save that changed something has to say
+ * so or the owner cannot tell it happened. That is exactly the case PLAN_SAVED
+ * was reserved for in S-03.
+ */
+export type UpdateState = { message?: string } | undefined
+
+/**
+ * Validates the plan id before it reaches PostgREST, exactly as
+ * DeletePlanSchema does: an id that cannot be a uuid would otherwise come back
+ * as a 22P02 cast error rather than a clean rejection.
+ */
+const UpdatePlanIdSchema = z.uuid()
+
+/**
+ * Persists an owner's edits to one saved plan (FR-014).
+ *
+ * The whole desired state of the plan travels in one JSON field, the way
+ * savePlan() takes the generated plan — and for the same reason: a 50-field
+ * uncontrolled form would have to echo every value back on failure, while the
+ * editor's React state IS the echo.
+ *
+ * NOT A TRUST BOUNDARY, again. The payload has been through the browser, and
+ * update_action_plan() re-derives every guarantee inside the transaction: the
+ * company comes from current_company_id() rather than from an argument, the
+ * plan must belong to it, every posted problem id must belong to that plan and
+ * every action id to that problem. A tampered payload can misspell a title; it
+ * cannot reach another company's plan, cannot re-parent a step under a
+ * different problem, and cannot half-apply — the whole edit aborts.
+ *
+ * Zod's job here is failure ORDERING rather than safety: a malformed body is
+ * one logged parse failure instead of a raw 22P02 surfacing out of PostgREST as
+ * if it were something the owner did.
+ */
+export async function updatePlan(
+  _prevState: UpdateState,
+  formData: FormData
+): Promise<UpdateState> {
+  await verifySession()
+
+  const validatedId = UpdatePlanIdSchema.safeParse(formData.get('planId'))
+
+  if (!validatedId.success) {
+    console.error('updatePlan: malformed plan id')
+    return { message: PLAN_UPDATE_FAILED }
+  }
+
+  const posted = formData.get('plan')
+
+  if (typeof posted !== 'string') {
+    console.error('updatePlan: no plan in the request body')
+    return { message: PLAN_UPDATE_FAILED }
+  }
+
+  let parsedJson: unknown
+
+  // Same guard savePlan documents: JSON.parse throws on malformed input, and an
+  // uncaught throw in a Server Action becomes the dashboard error boundary — a
+  // whole-page failure for what is one bad request.
+  try {
+    parsedJson = JSON.parse(posted)
+  } catch {
+    console.error('updatePlan: plan payload is not valid JSON')
+    return { message: PLAN_UPDATE_FAILED }
+  }
+
+  const validatedPlan = PlanEditSchema.safeParse(parsedJson)
+
+  if (!validatedPlan.success) {
+    console.error(
+      'updatePlan: plan payload failed validation:',
+      validatedPlan.error.message
+    )
+    return { message: PLAN_UPDATE_FAILED }
+  }
+
+  const supabase = await createClient()
+
+  // One RPC, one transaction. The edit spans three tables — rewritten header
+  // text, rewritten and removed problems and actions, and a renumber of what
+  // survives — and a sequence of PostgREST calls can leave a gap in `rank` or a
+  // problem stripped of its last action if any one of them fails midway.
+  const { error } = await supabase.rpc('update_action_plan', {
+    p_plan_id: validatedId.data,
+    p_summary: validatedPlan.data.summary,
+    p_problems: validatedPlan.data.problems,
+  })
+
+  if (error) {
+    // Logged, never surfaced. The RPC's own message names WHICH posted id
+    // failed to resolve against the plan — precisely what a tampered client
+    // would want to learn about which of its forged ids was rejected. This is
+    // also the stale-tab path: a plan deleted in another tab comes back as
+    // 42501, and the owner gets the generic message plus a reload.
+    console.error('update_action_plan failed:', error.code, error.message)
+    return { message: PLAN_UPDATE_FAILED }
+  }
+
+  // Both paths, because revalidatePath does not cascade to nested routes: the
+  // index shows the problem count and the "Edited" badge this write can change,
+  // and the plan's own route must stop serving the pre-edit payload.
+  //
+  // No redirect, unlike savePlan(). The owner stays where they were — which is
+  // why this action has a success message at all.
+  revalidatePath('/dashboard/plans')
+  revalidatePath(`/dashboard/plans/${validatedId.data}`)
+
+  return { message: PLAN_SAVED }
 }
 
 /**

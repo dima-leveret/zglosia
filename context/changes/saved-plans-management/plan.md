@@ -704,14 +704,14 @@ migration in the database.
 
 #### Automated
 
-- [ ] 2.1 New editing suite passes: `npm run test:remote`
-- [ ] 2.2 Full suite passes with no regressions: `npm run test:remote`
-- [ ] 2.3 Linting passes: `npm run lint`
+- [x] 2.1 New editing suite passes: `npm run test:remote`
+- [x] 2.2 Full suite passes with no regressions: `npm run test:remote`
+- [x] 2.3 Linting passes: `npm run lint`
 
 #### Manual
 
-- [ ] 2.4 Each denial asserts a specific SQLSTATE; no test treats an empty array as evidence of a denial
-- [ ] 2.5 Removing the offset pass from the renumber makes the contiguity test fail with `23505`
+- [x] 2.4 Each denial asserts a specific SQLSTATE; no test treats an empty array as evidence of a denial — reviewed against the full assertion inventory of `tests/plan-editing.test.ts`: 15 SQLSTATE assertions (`42501` tenancy at 437/479/480/513 and the standing table-privilege denials at 1005/1018/1035; `23514` foreign-id at 562/603; `22023` malformed-id-set and floor/ceiling at 624/645/680/710/738/758). Two assertions DO accept an empty array, at 1111 and 1138, and both are deliberate: a cross-tenant `delete` is refused by RLS rather than by a grant, so PostgREST reports success-with-zero-rows and there is no error code to assert. Each is paired with a service-role read proving the row survived (1112, 1140-1141), which is what keeps them from being the failure mode this item exists to catch. The `toHaveLength(0)` assertions at 885-887 and 1074-1076 are cascade checks on a SUCCESSFUL operation, not denials
+- [ ] 2.5 Removing the offset pass from the renumber makes the contiguity test fail with `23505` — WAIVED by the owner after review; not blocked in the sense 1.1 is, but consciously not run. Two reasons on the record. First, the same missing container runtime: with no Docker and no Postgres connection string in `.env.local` (REST keys only, no `psql`), the only DDL channel to a live database is `supabase db push` at the linked project, which would mean shipping a deliberately broken function and a second migration undoing it into forward-only history. Second, and the reason it was waived rather than deferred: the experiment is NON-DETERMINISTIC. Without the offset, whether the set-based `UPDATE` collides depends on the order Postgres happens to scan rows in, so it may raise `23505` or may silently produce the right answer on a given run — which is exactly why the offset is there, and also why "remove it and watch it fail" is not a reliable check. Compensating control: the two renumbering tests assert exact contiguity (`[1,2,3]` for `rank`, `[1,2]` for `position`) PLUS the surviving titles and contents in order, so a renumber that half-worked fails them on the values rather than on an error code
 
 ### Phase 3: Plans index + delete (FR-013 + FR-014a)
 

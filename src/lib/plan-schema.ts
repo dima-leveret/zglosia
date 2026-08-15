@@ -165,6 +165,133 @@ export const VerifiedPlanSchema: z.ZodType<VerifiedPlan> = z.object({
 })
 
 /**
+ * One action of a plan the OWNER is editing (S-04, FR-014).
+ *
+ * `id` is what makes an edit an edit. save_action_plan() posts new rows and
+ * needs no ids; update_action_plan() is handed the whole desired state and
+ * decides removal by absence, so every surviving row has to name itself.
+ */
+export type PlanEditAction = {
+  id: string
+  content: string
+}
+
+/** One problem of a plan being edited, with the actions it keeps. */
+export type PlanEditProblem = {
+  id: string
+  title: string
+  rationale: string
+  actions: PlanEditAction[]
+}
+
+/**
+ * A whole saved plan as the owner wants it to be.
+ *
+ * The key names are not free, exactly as VerifiedProblem's are not: they are
+ * the element keys `update_action_plan(p_plan_id, p_summary, p_problems)` reads
+ * out of its jsonb argument (`id`, `title`, `rationale`, `actions[].id`,
+ * `actions[].content`), so the update path hands `parsed.data.problems` straight
+ * to the RPC with no translation layer that could drift.
+ *
+ * `submissionIds` is deliberately ABSENT. Editing never touches
+ * plan_problem_submissions — the citations are the evidence, and the edit
+ * rewrites the words around them — and accepting the field even to ignore it
+ * would suggest otherwise to the next reader.
+ *
+ * Array order IS the priority order. `rank` and `position` are assigned from
+ * the position in the array inside the RPC and never read from the payload, so
+ * there is no ordering field here to keep in sync.
+ */
+export type PlanEdit = {
+  summary: string
+  problems: PlanEditProblem[]
+}
+
+/**
+ * The edit payload as it comes back over the wire.
+ *
+ * Same posture as VerifiedPlanSchema: STRUCTURE and BOUNDS only. It checks that
+ * every id is uuid-shaped and nothing more, because whether a uuid names a
+ * problem of THIS plan — or of this company's plan at all — is a question only
+ * the database can answer. update_action_plan() answers it inside the
+ * transaction and aborts on any id that does not resolve.
+ *
+ * Its job here is failure ORDERING, not safety: without it a malformed body
+ * reaches PostgREST and comes back as a raw `22P02` (invalid input syntax for
+ * uuid), which the Server Action would then have to translate. One logged parse
+ * failure is cheaper and says more.
+ *
+ * The bounds are the same constants the RPC's own floors and ceilings mirror,
+ * and the same ones the editor's `maxLength` attributes read — three copies of
+ * one number, which is why they are exported rather than inlined.
+ */
+export const PlanEditSchema: z.ZodType<PlanEdit> = z.object({
+  summary: modelText(PLAN_SUMMARY_MAX),
+  problems: z
+    .array(
+      z.object({
+        id: z.uuid(),
+        title: modelText(PROBLEM_TITLE_MAX),
+        rationale: modelText(PROBLEM_RATIONALE_MAX),
+        actions: z
+          .array(
+            z.object({
+              id: z.uuid(),
+              content: modelText(ACTION_CONTENT_MAX),
+            })
+          )
+          .min(PROBLEM_ACTIONS_MIN)
+          .max(PROBLEM_ACTIONS_MAX),
+      })
+    )
+    .min(PLAN_PROBLEMS_MIN)
+    .max(PLAN_PROBLEMS_MAX),
+})
+
+/**
+ * The snapshot of what the model originally produced, as stored in
+ * action_plans.original_content.
+ *
+ * Flat text, no ids: it is a thing to READ, not a thing to restore. The roadmap
+ * asks that editing not erase what the model gave ("pożądane zachowanie
+ * oryginału generacji"), and reading is what satisfies that — restoring would
+ * need the citations back too, and those belong to the rows that are still
+ * there.
+ */
+export type PlanOriginal = {
+  summary: string
+  problems: {
+    title: string
+    rationale: string
+    actions: string[]
+  }[]
+}
+
+/**
+ * The snapshot re-parsed on the way out.
+ *
+ * The column is jsonb with only a shallow `jsonb_typeof(...) = 'object'` CHECK
+ * behind it, so the generated types can say no more than "some json". Parsing
+ * rather than casting is what keeps a render of the original from throwing on
+ * `.map` of undefined.
+ *
+ * Bounds are deliberately NOT re-applied. update_action_plan() builds this value
+ * from stored rows that already passed the table CHECKs, so a length rule here
+ * could only ever reject a legitimate snapshot — and a plan whose original
+ * cannot be shown is worse than one whose original is a little long.
+ */
+export const PlanOriginalSchema: z.ZodType<PlanOriginal> = z.object({
+  summary: z.string(),
+  problems: z.array(
+    z.object({
+      title: z.string(),
+      rationale: z.string(),
+      actions: z.array(z.string()),
+    })
+  ),
+})
+
+/**
  * What resolveCitations() found. The drop lists exist so the caller can log
  * what the model got wrong — silently discarding a hallucinated citation and
  * saying nothing is how a model that has started inventing evidence stays

@@ -4,23 +4,30 @@ import { createOpenRouter } from '@openrouter/ai-sdk-provider'
 import { NoObjectGeneratedError, Output, generateText } from 'ai'
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
+import { z } from 'zod'
 
 import { getCompany, getSubmissions, verifySession } from '@/lib/dal'
 import { buildPlanPrompt } from '@/lib/plan-prompt'
 import {
+  PlanEditSchema,
   PlanOutputSchema,
   VerifiedPlanSchema,
   resolveCitations,
   type VerifiedPlan,
 } from '@/lib/plan-schema'
 import { createClient } from '@/lib/supabase/server'
+import type { FormState } from '@/lib/validation'
 
 import {
+  PLAN_DELETED,
+  PLAN_DELETE_FAILED,
   PLAN_GENERATION_FAILED,
   PLAN_GENERATION_THROTTLED,
   PLAN_GENERATION_TIMED_OUT,
   PLAN_NO_SUBMISSIONS,
+  PLAN_SAVED,
   PLAN_SAVE_FAILED,
+  PLAN_UPDATE_FAILED,
 } from './messages'
 
 /**
@@ -396,4 +403,227 @@ export async function savePlan(
   revalidatePath('/dashboard/plans')
 
   redirect(`/dashboard/plans/${planId}`)
+}
+
+/**
+ * What the edit form gets back. Unlike SaveState this DOES carry a success:
+ * updatePlan() stays on the page, so a save that changed something has to say
+ * so or the owner cannot tell it happened. That is exactly the case PLAN_SAVED
+ * was reserved for in S-03.
+ */
+export type UpdateState = { message?: string } | undefined
+
+/**
+ * Validates the plan id before it reaches PostgREST, exactly as
+ * DeletePlanSchema does: an id that cannot be a uuid would otherwise come back
+ * as a 22P02 cast error rather than a clean rejection.
+ */
+const UpdatePlanIdSchema = z.uuid()
+
+/**
+ * Persists an owner's edits to one saved plan (FR-014).
+ *
+ * The whole desired state of the plan travels in one JSON field, the way
+ * savePlan() takes the generated plan — and for the same reason: a 50-field
+ * uncontrolled form would have to echo every value back on failure, while the
+ * editor's React state IS the echo.
+ *
+ * NOT A TRUST BOUNDARY, again. The payload has been through the browser, and
+ * update_action_plan() re-derives every guarantee inside the transaction: the
+ * company comes from current_company_id() rather than from an argument, the
+ * plan must belong to it, every posted problem id must belong to that plan and
+ * every action id to that problem. A tampered payload can misspell a title; it
+ * cannot reach another company's plan, cannot re-parent a step under a
+ * different problem, and cannot half-apply — the whole edit aborts.
+ *
+ * Zod's job here is failure ORDERING rather than safety: a malformed body is
+ * one logged parse failure instead of a raw 22P02 surfacing out of PostgREST as
+ * if it were something the owner did.
+ */
+export async function updatePlan(
+  _prevState: UpdateState,
+  formData: FormData
+): Promise<UpdateState> {
+  await verifySession()
+
+  const validatedId = UpdatePlanIdSchema.safeParse(formData.get('planId'))
+
+  if (!validatedId.success) {
+    console.error('updatePlan: malformed plan id')
+    return { message: PLAN_UPDATE_FAILED }
+  }
+
+  const posted = formData.get('plan')
+
+  if (typeof posted !== 'string') {
+    console.error('updatePlan: no plan in the request body')
+    return { message: PLAN_UPDATE_FAILED }
+  }
+
+  let parsedJson: unknown
+
+  // Same guard savePlan documents: JSON.parse throws on malformed input, and an
+  // uncaught throw in a Server Action becomes the dashboard error boundary — a
+  // whole-page failure for what is one bad request.
+  try {
+    parsedJson = JSON.parse(posted)
+  } catch {
+    console.error('updatePlan: plan payload is not valid JSON')
+    return { message: PLAN_UPDATE_FAILED }
+  }
+
+  const validatedPlan = PlanEditSchema.safeParse(parsedJson)
+
+  if (!validatedPlan.success) {
+    console.error(
+      'updatePlan: plan payload failed validation:',
+      validatedPlan.error.message
+    )
+    return { message: PLAN_UPDATE_FAILED }
+  }
+
+  const supabase = await createClient()
+
+  // One RPC, one transaction. The edit spans three tables — rewritten header
+  // text, rewritten and removed problems and actions, and a renumber of what
+  // survives — and a sequence of PostgREST calls can leave a gap in `rank` or a
+  // problem stripped of its last action if any one of them fails midway.
+  const { error } = await supabase.rpc('update_action_plan', {
+    p_plan_id: validatedId.data,
+    p_summary: validatedPlan.data.summary,
+    p_problems: validatedPlan.data.problems,
+  })
+
+  if (error) {
+    // Logged, never surfaced. The RPC's own message names WHICH posted id
+    // failed to resolve against the plan — precisely what a tampered client
+    // would want to learn about which of its forged ids was rejected. This is
+    // also the stale-tab path: a plan deleted in another tab comes back as
+    // 42501, and the owner gets the generic message plus a reload.
+    console.error('update_action_plan failed:', error.code, error.message)
+    return { message: PLAN_UPDATE_FAILED }
+  }
+
+  // Both paths, because revalidatePath does not cascade to nested routes: the
+  // index shows the problem count and the "Edited" badge this write can change,
+  // and the plan's own route must stop serving the pre-edit payload.
+  //
+  // No redirect, unlike savePlan(). The owner stays where they were — which is
+  // why this action has a success message at all.
+  revalidatePath('/dashboard/plans')
+  revalidatePath(`/dashboard/plans/${validatedId.data}`)
+
+  return { message: PLAN_SAVED }
+}
+
+/**
+ * Where a successful delete may send the caller.
+ *
+ * A literal, not a path shape. The plan's own page has to leave after deleting
+ * the thing it renders, while a list row must stay put — so the caller does
+ * need to say which. But "the caller chooses a destination" is an open redirect
+ * the moment the destination is anything it can spell, and a hidden field is
+ * trivially rewritten. Matching one literal keeps the choice binary: this page,
+ * or stay.
+ */
+const DELETE_PLAN_REDIRECT = '/dashboard/plans'
+
+/**
+ * Validates the id before it reaches PostgREST, exactly as deleteSubmission
+ * does: without this a malformed id comes back as a 22P02 cast error rather
+ * than a clean rejection.
+ */
+const DeletePlanSchema = z.object({
+  id: z.uuid(),
+})
+
+/**
+ * Permanently removes one saved plan belonging to the caller's company
+ * (FR-014). Hard delete, and the only write in this feature that does NOT go
+ * through a security-definer RPC.
+ *
+ * That exception is deliberate and is stated in the migration: every structural
+ * write needs an invariant re-derived inside Postgres — a partial one corrupts
+ * the plan — but a whole-plan delete has no invariant to protect. The children
+ * go with it on the FK cascade, so `delete` on action_plans is granted directly
+ * and scoped by the action_plans_delete_own policy. No child table has a delete
+ * grant.
+ */
+// FormState<never>, like deleteSubmission: this action returns only a
+// `message` and has no per-field error channel at all.
+export async function deletePlan(
+  _prevState: FormState<never>,
+  formData: FormData
+): Promise<FormState<never>> {
+  await verifySession()
+
+  const validatedFields = DeletePlanSchema.safeParse({
+    id: formData.get('id'),
+  })
+
+  if (!validatedFields.success) {
+    console.error('deletePlan: malformed plan id')
+    return { message: PLAN_DELETE_FAILED }
+  }
+
+  const posted = formData.get('redirectTo')
+  const redirectTo = posted === DELETE_PLAN_REDIRECT ? posted : null
+
+  // SECURITY — the company scope comes from the session-scoped read and from
+  // nothing else. Only the id is caller-supplied, and it is constrained by the
+  // company filter below plus RLS.
+  const company = await getCompany()
+
+  if (!company) {
+    console.error('deletePlan: no company provisioned for this owner')
+    return { message: PLAN_DELETE_FAILED }
+  }
+
+  const supabase = await createClient()
+
+  // The company_id filter is the same seatbelt deleteSubmission documents. RLS
+  // is the boundary, but the failure modes are not symmetric: an over-matching
+  // SELECT leaks, while an over-matching DELETE destroys rows outright.
+  // .select('id') is what makes a zero-row delete visible — without it,
+  // deleting another owner's plan id comes back indistinguishable from success
+  // and the owner is told it worked.
+  const { data, error } = await supabase
+    .from('action_plans')
+    .delete()
+    .eq('id', validatedFields.data.id)
+    .eq('company_id', company.id)
+    .select('id')
+
+  if (error) {
+    console.error('plan delete failed:', error.code, error.message)
+    return { message: PLAN_DELETE_FAILED }
+  }
+
+  if (!data?.length) {
+    console.error('plan delete matched no row for company', company.id)
+
+    // Revalidate before returning, unlike the error branch above. Zero rows
+    // usually means the plan is already gone — deleted in another tab, or on a
+    // page left open since. Returning without revalidating leaves the stale row
+    // rendered under a permanent failure, and every retry reproduces it. Same
+    // reasoning deleteSubmission records.
+    revalidatePath('/dashboard/plans')
+
+    return { message: PLAN_DELETE_FAILED }
+  }
+
+  // Both paths, because revalidatePath does not cascade to nested routes: the
+  // index loses a row, and the deleted plan's own route must stop serving a
+  // cached payload for a plan that no longer exists.
+  revalidatePath('/dashboard/plans')
+  revalidatePath(`/dashboard/plans/${validatedFields.data.id}`)
+
+  if (redirectTo) {
+    // Only reachable from the plan's own page, which cannot stay on a route
+    // that now 404s. redirect() throws, so nothing below it runs — which is why
+    // the revalidations are above.
+    redirect(redirectTo)
+  }
+
+  return { message: PLAN_DELETED }
 }

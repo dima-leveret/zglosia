@@ -5,6 +5,13 @@ import { redirect } from 'next/navigation'
 
 import { createClient } from '@/lib/supabase/server'
 import type { Database } from '@/lib/supabase/database.types'
+// The two read caps live in a pure module rather than here: this one carries
+// `server-only`, and plan-schema.ts — which the client-side plan editor imports
+// its bounds from — needs SUBMISSION_LIST_LIMIT. See list-limits.ts.
+import {
+  ACTION_PLAN_LIST_LIMIT,
+  SUBMISSION_LIST_LIMIT,
+} from '@/lib/list-limits'
 
 /**
  * The single auth gate. Every owner-facing data request calls this first.
@@ -49,14 +56,6 @@ export const getCompany = cache(async () => {
 
   return data
 })
-
-/**
- * How many submissions one page render will show. The list is capped rather
- * than paginated: the owner's next action is "generate a plan from all of
- * these", not "page through them", so offset links would be scaffolding for a
- * workflow the product does not have.
- */
-export const SUBMISSION_LIST_LIMIT = 100
 
 /**
  * One row as the list renders it. Derived from the generated schema rather than
@@ -140,9 +139,18 @@ export type ActionPlanProblem = Pick<
   citations: ActionPlanCitation[]
 }
 
+/**
+ * `original_content` arrives as raw jsonb — `Json | null` — and is deliberately
+ * NOT parsed here. It is a snapshot `update_action_plan()` builds inside
+ * Postgres, so it is trusted enough to store but not to render: the component
+ * that displays it runs it through a Zod schema first, the same way every other
+ * jsonb round trip in this feature is validated at its edge. Null means "never
+ * edited" — it is both the flag and the store, which is why there is no
+ * separate edited_at column.
+ */
 export type ActionPlanDetail = Pick<
   Database['public']['Tables']['action_plans']['Row'],
-  'id' | 'summary' | 'created_at'
+  'id' | 'summary' | 'created_at' | 'updated_at' | 'original_content'
 > & { problems: ActionPlanProblem[] }
 
 /**
@@ -176,7 +184,7 @@ export const getActionPlan = cache(
     const { data, error } = await supabase
       .from('action_plans')
       .select(
-        `id, summary, created_at,
+        `id, summary, created_at, updated_at, original_content,
          plan_problems (
            id, rank, title, rationale,
            plan_actions ( id, position, content ),
@@ -198,6 +206,8 @@ export const getActionPlan = cache(
       id: data.id,
       summary: data.summary,
       created_at: data.created_at,
+      updated_at: data.updated_at,
+      original_content: data.original_content,
       problems: [...data.plan_problems]
         .sort((a, b) => a.rank - b.rank)
         .map((problem) => ({
@@ -225,39 +235,66 @@ export const getActionPlan = cache(
 )
 
 /**
- * The newest saved plan's id and date, or null when the company has none.
+ * One saved plan as the index renders it.
  *
- * Deliberately the LATEST ONE, not a list. FR-013 (przeglądać zapisane plany)
- * is S-04 and gets a real list page there; what this read exists for is the
- * FR-012 acceptance criterion — "wygenerowany plan można zapisać i ODNALEŹĆ
- * PÓŹNIEJ na koncie" — which a plan reachable only through savePlan()'s
- * one-time redirect does not satisfy. A link the owner can come back to does,
- * and it is one row rather than a surface S-04 would then have to replace.
- *
- * `limit(1)` with the same (created_at desc, id desc) order the list index
- * carries, so this is an index-only walk to the first row.
+ * `problemCount` and `edited` are computed in the mapping below rather than in
+ * the component, so no surface re-derives them — and in particular so "edited"
+ * has ONE definition (`original_content is not null`, which is the same flag
+ * the database uses as its write-once guard) instead of one per renderer.
  */
-export const getLatestActionPlan = cache(async () => {
-  await verifySession()
+export type ActionPlanListRow = Pick<
+  Database['public']['Tables']['action_plans']['Row'],
+  'id' | 'created_at' | 'updated_at'
+> & {
+  problemCount: number
+  edited: boolean
+}
 
-  const supabase = await createClient()
-  const { data, error } = await supabase
-    .from('action_plans')
-    .select('id, created_at')
-    .order('created_at', { ascending: false })
-    // Tiebreaker, not decoration: plans saved in the same statement share
-    // created_at, and this pair matches action_plans_company_created_idx
-    // exactly so the read stays an index scan.
-    .order('id', { ascending: false })
-    .limit(1)
-    .maybeSingle()
+/**
+ * Every saved plan for the caller's company, newest first (FR-013).
+ *
+ * Same filter-free read convention as every other read in this module: RLS
+ * scopes action_plans to company_id = current_company_id(), so no company
+ * filter appears here. The isolation is in Postgres.
+ *
+ * ONE round trip. `plan_problems(count)` is a PostgREST aggregate on the
+ * embedded relation, so the per-plan problem count comes back with the header
+ * row instead of as a second query per plan. The count is subject to the same
+ * RLS as a direct read of plan_problems, which is what makes it safe to show.
+ */
+export const getActionPlans = cache(
+  async (): Promise<ActionPlanListRow[]> => {
+    await verifySession()
 
-  if (error) {
-    throw error
+    const supabase = await createClient()
+    const { data, error } = await supabase
+      .from('action_plans')
+      .select('id, created_at, updated_at, original_content, plan_problems(count)')
+      .order('created_at', { ascending: false })
+      // Tiebreaker, not decoration: plans saved in the same statement share
+      // created_at, and this pair matches action_plans_company_created_idx
+      // exactly so the read stays an index scan.
+      .order('id', { ascending: false })
+      .limit(ACTION_PLAN_LIST_LIMIT)
+
+    if (error) {
+      throw error
+    }
+
+    return (data ?? []).map((plan) => ({
+      id: plan.id,
+      created_at: plan.created_at,
+      updated_at: plan.updated_at,
+      // PostgREST returns an aggregate on an embedded relation as a one-element
+      // array, and an empty one when the relation has no rows — which a plan
+      // cannot legitimately be in (save_action_plan() writes at least one
+      // problem and update_action_plan() refuses to remove the last), so the
+      // fallback is defensive rather than expected.
+      problemCount: plan.plan_problems[0]?.count ?? 0,
+      edited: plan.original_content !== null,
+    }))
   }
-
-  return data
-})
+)
 
 /**
  * Just the total, for the dashboard. `head: true` sends no rows back — the

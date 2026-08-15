@@ -1,14 +1,15 @@
 import Link from 'next/link'
 
+import { getActionPlans, getCompany, getSubmissionCount } from '@/lib/dal'
 import {
+  ACTION_PLAN_LIST_LIMIT,
   SUBMISSION_LIST_LIMIT,
-  getCompany,
-  getLatestActionPlan,
-  getSubmissionCount,
-} from '@/lib/dal'
+} from '@/lib/list-limits'
 import { isCompanyProfileComplete } from '@/lib/validation'
 
+import { PLAN_LIST_EMPTY } from './messages'
 import { PlanGenerator } from './plan-generator'
+import { PlanList, type PlanListItem } from './plan-list'
 
 /**
  * Fixed locale, formatted on the server, same as every other date in the app —
@@ -35,7 +36,8 @@ const dateFormatter = new Intl.DateTimeFormat('en-GB', {
 const THIN_PLAN_THRESHOLD = 5
 
 /**
- * The action-plan surface (US-01, FR-011). Lives under /dashboard so the
+ * The action-plan surface (US-01, FR-011) and, since S-04, the saved-plans
+ * index (FR-013). Lives under /dashboard so the
  * existing PROTECTED_PREFIXES guard in src/proxy.ts covers it with no config
  * change; verifySession() inside the DAL is the actual boundary.
  *
@@ -47,13 +49,25 @@ const THIN_PLAN_THRESHOLD = 5
 export default async function PlansPage() {
   // Independent reads, so they overlap rather than queue. verifySession is
   // cache()d, so the three getUser() calls dedupe to one round trip.
-  const [company, submissionCount, latestPlan] = await Promise.all([
+  const [company, submissionCount, plans] = await Promise.all([
     getCompany(),
     getSubmissionCount(),
-    getLatestActionPlan(),
+    getActionPlans(),
   ])
 
   const profileComplete = isCompanyProfileComplete(company)
+
+  // Formatted here, on the server, for the reason the submissions page states:
+  // the list below is a client component, so formatting there would run in the
+  // browser's zone on hydration and the server's zone on render — two different
+  // days for the same plan near midnight.
+  const items: PlanListItem[] = plans.map((plan) => ({
+    id: plan.id,
+    problemCount: plan.problemCount,
+    edited: plan.edited,
+    isoDate: plan.created_at,
+    formattedDate: dateFormatter.format(new Date(plan.created_at)),
+  }))
 
   return (
     <main className="flex flex-1 flex-col items-center gap-6 bg-zinc-50 px-6 py-10 dark:bg-black">
@@ -160,27 +174,44 @@ export default async function PlansPage() {
           </div>
         )}
 
-        {/* The way back to a plan already saved (FR-012 — "zapisać i odnaleźć
-            później"). savePlan() redirects here once and never again, so
-            without this the only route to a saved plan is a URL the owner had
-            to catch mid-redirect.
+        {/* Everything saved (FR-013), replacing S-03's single "latest plan"
+            link — which existed only because there was no list yet.
 
-            The LATEST one, not a list: FR-013 is S-04, and this is one row
-            rather than a surface that slice would have to replace.
-
-            Rendered outside the submission-count branches on purpose — a saved
+            Rendered OUTSIDE the submission-count branches on purpose: a saved
             plan outlives the submissions it was generated from (FR-009 lets the
-            owner delete them), so an owner at zero submissions can still have a
-            plan to come back to, and that is exactly when a dead end would be
+            owner delete them), so an owner at zero submissions can still have
+            plans here, and that is exactly when the dead end above would be
             most confusing. */}
-        {company && latestPlan && (
-          <Link
-            href={`/dashboard/plans/${latestPlan.id}`}
-            className="flex h-11 w-full items-center justify-center rounded-full border border-zinc-300 px-5 text-sm font-medium transition-colors hover:bg-black/[.04] dark:border-zinc-700 dark:hover:bg-white/[.06]"
-          >
-            View your saved plan from{' '}
-            {dateFormatter.format(new Date(latestPlan.created_at))}
-          </Link>
+        {company && (
+          <div className="flex flex-col gap-3">
+            <div className="flex items-baseline justify-between">
+              <h2 className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
+                {plans.length === 0
+                  ? 'Saved plans'
+                  : plans.length === 1
+                    ? '1 saved plan'
+                    : `${plans.length} saved plans`}
+              </h2>
+              {/* Explicit rather than silently truncating: the owner should
+                  never be told a number the list below does not contain. The
+                  same rule the submissions list states. */}
+              {plans.length === ACTION_PLAN_LIST_LIMIT && (
+                <p className="text-xs text-zinc-500 dark:text-zinc-500">
+                  Showing the latest {ACTION_PLAN_LIST_LIMIT}
+                </p>
+              )}
+            </div>
+
+            {plans.length > 0 ? (
+              <PlanList plans={items} />
+            ) : (
+              <div className="rounded-2xl border border-dashed border-zinc-300 p-8 text-center dark:border-zinc-700">
+                <p className="text-sm text-zinc-600 dark:text-zinc-400">
+                  {PLAN_LIST_EMPTY}
+                </p>
+              </div>
+            )}
+          </div>
         )}
       </div>
     </main>

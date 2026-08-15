@@ -49,11 +49,11 @@ export const PLAN_GENERATION_THROTTLED =
   'You have reached the daily limit for generating action plans. Please try again tomorrow.'
 
 /**
- * Reserved, and deliberately unread today. savePlan() ends in redirect(), which
- * throws, so this slice has no render path a success message could reach —
- * SaveState in actions.ts says the same thing from the other side. It is kept
- * for S-04's save-in-place edits (FR-014), where a save that stays on the page
- * does need to confirm itself.
+ * Read by the editor (FR-014), not by savePlan(): savePlan() ends in
+ * redirect(), which throws, so a first save has no render path a success
+ * message could reach. An EDIT stays on the page, which is exactly the case
+ * this string was reserved in S-03 for — a save that does not navigate has to
+ * confirm itself, or the owner cannot tell it happened.
  */
 export const PLAN_SAVED = 'Action plan saved.'
 
@@ -67,3 +67,36 @@ export const PLAN_SAVE_FAILED =
   'Could not save the action plan. Please try again.'
 
 export const PLAN_DISCARDED = 'Action plan discarded. Nothing was saved.'
+
+/**
+ * The delete confirmation (FR-014). Announced by the list rather than rendered
+ * by the row, because a successful delete unmounts the row it was triggered
+ * from — the same reason SUBMISSION_DELETED lives with the submission list.
+ */
+export const PLAN_DELETED = 'Action plan deleted.'
+
+/**
+ * Generic on purpose, exactly like SUBMISSION_DELETE_FAILED. It covers both a
+ * transport failure and a delete that matched no row — a plan already deleted
+ * in another tab — because the owner's next move is the same in both: look at
+ * the refreshed list.
+ */
+export const PLAN_DELETE_FAILED =
+  'Could not delete the action plan. Please try again.'
+
+/**
+ * Generic for the reason PLAN_SAVE_FAILED is: update_action_plan()'s own error
+ * names WHICH posted id failed to resolve against the plan, which is precisely
+ * what a tampered client would want to learn. The code and the message go to
+ * the log; the owner gets this.
+ */
+export const PLAN_UPDATE_FAILED =
+  'Could not save your changes. Please try again.'
+
+/**
+ * The saved-plans empty state, not an error — the same posture
+ * PLAN_NO_SUBMISSIONS takes. It appears next to a generator that works, so it
+ * explains what the section will hold rather than reporting an absence.
+ */
+export const PLAN_LIST_EMPTY =
+  'No saved plans yet. Once you generate a plan and save it, it will appear here — and stay, even after the submissions behind it are gone.'

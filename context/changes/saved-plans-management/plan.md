@@ -717,18 +717,18 @@ migration in the database.
 
 #### Automated
 
-- [ ] 3.1 Type checking passes: `npx tsc --noEmit`
-- [ ] 3.2 Linting passes: `npm run lint`
-- [ ] 3.3 Build succeeds: `npm run build`
-- [ ] 3.4 Full suite passes: `npm run test:remote`
+- [x] 3.1 Type checking passes: `npx tsc --noEmit`
+- [x] 3.2 Linting passes: `npm run lint`
+- [x] 3.3 Build succeeds: `npm run build`
+- [x] 3.4 Full suite passes: `npm run test:remote`
 
 #### Manual
 
-- [ ] 3.5 `/dashboard/plans` lists saved plans newest first with correct problem counts
-- [ ] 3.6 Deleting from a list row announces the outcome and places focus outside the removed row
-- [ ] 3.7 Keyboard-only arm/cancel moves focus to Cancel then back to Delete
-- [ ] 3.8 An owner with zero submissions but one saved plan still reaches the plan
-- [ ] 3.9 Deleting the last plan leaves the empty state, not a blank region
+- [x] 3.5 `/dashboard/plans` lists saved plans newest first with correct problem counts
+- [x] 3.6 Deleting from a list row announces the outcome and places focus outside the removed row
+- [x] 3.7 Keyboard-only arm/cancel moves focus to Cancel then back to Delete
+- [x] 3.8 An owner with zero submissions but one saved plan still reaches the plan
+- [x] 3.9 Deleting the last plan leaves the empty state, not a blank region
 
 ### Phase 4: Edit mode + original view (FR-014b)
 

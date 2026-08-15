@@ -4,6 +4,7 @@ import { createOpenRouter } from '@openrouter/ai-sdk-provider'
 import { NoObjectGeneratedError, Output, generateText } from 'ai'
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
+import { z } from 'zod'
 
 import { getCompany, getSubmissions, verifySession } from '@/lib/dal'
 import { buildPlanPrompt } from '@/lib/plan-prompt'
@@ -14,8 +15,11 @@ import {
   type VerifiedPlan,
 } from '@/lib/plan-schema'
 import { createClient } from '@/lib/supabase/server'
+import type { FormState } from '@/lib/validation'
 
 import {
+  PLAN_DELETED,
+  PLAN_DELETE_FAILED,
   PLAN_GENERATION_FAILED,
   PLAN_GENERATION_THROTTLED,
   PLAN_GENERATION_TIMED_OUT,
@@ -396,4 +400,116 @@ export async function savePlan(
   revalidatePath('/dashboard/plans')
 
   redirect(`/dashboard/plans/${planId}`)
+}
+
+/**
+ * Where a successful delete may send the caller.
+ *
+ * A literal, not a path shape. The plan's own page has to leave after deleting
+ * the thing it renders, while a list row must stay put — so the caller does
+ * need to say which. But "the caller chooses a destination" is an open redirect
+ * the moment the destination is anything it can spell, and a hidden field is
+ * trivially rewritten. Matching one literal keeps the choice binary: this page,
+ * or stay.
+ */
+const DELETE_PLAN_REDIRECT = '/dashboard/plans'
+
+/**
+ * Validates the id before it reaches PostgREST, exactly as deleteSubmission
+ * does: without this a malformed id comes back as a 22P02 cast error rather
+ * than a clean rejection.
+ */
+const DeletePlanSchema = z.object({
+  id: z.uuid(),
+})
+
+/**
+ * Permanently removes one saved plan belonging to the caller's company
+ * (FR-014). Hard delete, and the only write in this feature that does NOT go
+ * through a security-definer RPC.
+ *
+ * That exception is deliberate and is stated in the migration: every structural
+ * write needs an invariant re-derived inside Postgres — a partial one corrupts
+ * the plan — but a whole-plan delete has no invariant to protect. The children
+ * go with it on the FK cascade, so `delete` on action_plans is granted directly
+ * and scoped by the action_plans_delete_own policy. No child table has a delete
+ * grant.
+ */
+// FormState<never>, like deleteSubmission: this action returns only a
+// `message` and has no per-field error channel at all.
+export async function deletePlan(
+  _prevState: FormState<never>,
+  formData: FormData
+): Promise<FormState<never>> {
+  await verifySession()
+
+  const validatedFields = DeletePlanSchema.safeParse({
+    id: formData.get('id'),
+  })
+
+  if (!validatedFields.success) {
+    console.error('deletePlan: malformed plan id')
+    return { message: PLAN_DELETE_FAILED }
+  }
+
+  const posted = formData.get('redirectTo')
+  const redirectTo = posted === DELETE_PLAN_REDIRECT ? posted : null
+
+  // SECURITY — the company scope comes from the session-scoped read and from
+  // nothing else. Only the id is caller-supplied, and it is constrained by the
+  // company filter below plus RLS.
+  const company = await getCompany()
+
+  if (!company) {
+    console.error('deletePlan: no company provisioned for this owner')
+    return { message: PLAN_DELETE_FAILED }
+  }
+
+  const supabase = await createClient()
+
+  // The company_id filter is the same seatbelt deleteSubmission documents. RLS
+  // is the boundary, but the failure modes are not symmetric: an over-matching
+  // SELECT leaks, while an over-matching DELETE destroys rows outright.
+  // .select('id') is what makes a zero-row delete visible — without it,
+  // deleting another owner's plan id comes back indistinguishable from success
+  // and the owner is told it worked.
+  const { data, error } = await supabase
+    .from('action_plans')
+    .delete()
+    .eq('id', validatedFields.data.id)
+    .eq('company_id', company.id)
+    .select('id')
+
+  if (error) {
+    console.error('plan delete failed:', error.code, error.message)
+    return { message: PLAN_DELETE_FAILED }
+  }
+
+  if (!data?.length) {
+    console.error('plan delete matched no row for company', company.id)
+
+    // Revalidate before returning, unlike the error branch above. Zero rows
+    // usually means the plan is already gone — deleted in another tab, or on a
+    // page left open since. Returning without revalidating leaves the stale row
+    // rendered under a permanent failure, and every retry reproduces it. Same
+    // reasoning deleteSubmission records.
+    revalidatePath('/dashboard/plans')
+
+    return { message: PLAN_DELETE_FAILED }
+  }
+
+  // Both paths, because revalidatePath does not cascade to nested routes: the
+  // index loses a row, and the deleted plan's own route must stop serving a
+  // cached payload for a plan that no longer exists.
+  revalidatePath('/dashboard/plans')
+  revalidatePath(`/dashboard/plans/${validatedFields.data.id}`)
+
+  if (redirectTo) {
+    // Only reachable from the plan's own page, which cannot stay on a route
+    // that now 404s. redirect() throws, so nothing below it runs — which is why
+    // the revalidations are above.
+    redirect(redirectTo)
+  }
+
+  return { message: PLAN_DELETED }
 }

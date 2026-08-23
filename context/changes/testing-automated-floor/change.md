@@ -1,9 +1,9 @@
 ---
 change_id: testing-automated-floor
 title: Rollout Phase 1 — automated test floor and migration-state gate
-status: new
+status: preparing
 created: 2026-08-17
-updated: 2026-08-17
+updated: 2026-08-23
 archived_at: null
 ---
 
